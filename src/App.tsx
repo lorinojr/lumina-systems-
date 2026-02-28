@@ -15,13 +15,11 @@ import {
   Minus, 
   X, 
   CheckCircle, 
-  Clock, 
   WhatsappLogo, 
   DotsThreeVertical,
   CurrencyCircleDollar,
   IdentificationCard,
   WarningCircle,
-  Lock,
   ArrowRight,
   CaretRight,
   UserCircle,
@@ -30,6 +28,11 @@ import {
 import { Language, translations } from './i18n';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { PaymentModal } from './components/PaymentModal';
+import { useKillSwitch } from './hooks/useKillSwitch';
+import { KillSwitchOverlay } from './components/KillSwitchOverlay';
+import { GracePeriodBanner } from './components/GracePeriodBanner';
+import { Day4ReminderModal } from './components/Day4ReminderModal';
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
@@ -190,10 +193,9 @@ const POSModule = ({ products, onNotify, t }: { products: Product[], onNotify: (
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success'>('idle');
+  const [isSTKModalOpen, setIsSTKModalOpen] = useState(false);
   const [receivedAmount, setReceivedAmount] = useState<number>(0);
 
   const addToCart = (product: Product) => {
@@ -522,11 +524,7 @@ const POSModule = ({ products, onNotify, t }: { products: Product[], onNotify: (
             </button>
             <button 
               disabled={cart.length === 0}
-              onClick={() => {
-                setIsCheckoutOpen(true);
-                setPaymentStatus('pending');
-                setTimeout(() => setPaymentStatus('success'), 3000);
-              }}
+              onClick={() => setIsSTKModalOpen(true)}
               className="py-5 bg-accent text-white rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-accent/90 transition-all shadow-lg shadow-accent/20 disabled:opacity-30"
             >
               <div className="flex items-center gap-2">
@@ -539,58 +537,40 @@ const POSModule = ({ products, onNotify, t }: { products: Product[], onNotify: (
         </div>
       </div>
 
-      {/* Checkout Modal (M-Pesa) */}
-      <Modal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} title={`${t.pos.mpesa} ${t.modals.cashPayment}`}>
-        <div className="py-4">
-          {paymentStatus === 'pending' ? (
-            <div className="space-y-8 text-center">
-              <div className="w-24 h-24 mx-auto relative">
-                <motion.div 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 border-4 border-accent/10 border-t-accent rounded-full"
-                />
-                <div className="absolute inset-0 flex items-center justify-center text-accent">
-                  <Clock size={40} weight="bold" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-extrabold text-ink">{t.pos.awaitingPayment}</h3>
-                <p className="text-muted text-sm font-medium leading-relaxed">
-                  {t.pos.stkSent}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-8 text-center">
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-24 h-24 mx-auto bg-success text-white rounded-full flex items-center justify-center shadow-xl shadow-success/20"
-              >
-                <CheckCircle size={56} weight="bold" />
-              </motion.div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-extrabold text-ink">{t.pos.paymentVerified}</h3>
-                <p className="text-muted text-sm font-medium">
-                  {t.pos.reconciled}
-                </p>
-              </div>
-              <button 
-                onClick={() => {
-                  setIsCheckoutOpen(false);
-                  setCart([]);
-                  setPaymentStatus('idle');
-                  onNotify(t.pos.saleCompletedMpesa);
-                }}
-                className="w-full py-4 bg-ink text-white rounded-2xl font-bold hover:bg-black/80 transition-colors"
-              >
-                {t.pos.done}
-              </button>
-            </div>
-          )}
-        </div>
-      </Modal>
+      {/* STK Push Payment Modal */}
+      <PaymentModal
+        isOpen={isSTKModalOpen}
+        onClose={() => setIsSTKModalOpen(false)}
+        amount={total + iva}
+        onSuccess={() => {
+          setIsSTKModalOpen(false);
+          setCart([]);
+          onNotify(t.pos.saleCompletedMpesa);
+        }}
+        onSwitchToCash={() => {
+          setIsSTKModalOpen(false);
+          setIsCashModalOpen(true);
+        }}
+        t={{
+          title: t.pos.stkPushTitle,
+          phoneLabel: t.pos.phoneLabel,
+          confirm: t.pos.confirm,
+          invalidNumber: t.pos.invalidNumber,
+          communicating: t.pos.communicating,
+          checkPhone: t.pos.checkPhone,
+          resend: t.pos.resend,
+          paidButNotWorking: t.pos.paidButNotWorking,
+          paymentReceived: t.pos.paymentReceived,
+          tryAgain: t.pos.tryAgain,
+          payCash: t.pos.payCash,
+          saldoInsuficiente: 'Saldo Insuficiente',
+          pinInvalido: 'PIN Inválido',
+          cancelado: 'Cancelado pelo Utilizador',
+          tempoExpirado: 'Tempo Expirado',
+          vodacom: t.pos.vodacom,
+          movitel: t.pos.movitel,
+        }}
+      />
     </div>
   );
 };
@@ -977,11 +957,30 @@ export default function App() {
   const [lang, setLang] = useState<Language>('pt');
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState('pos');
-  const [isLocked, setIsLocked] = useState(false);
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [notification, setNotification] = useState<string | null>(null);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [showSubscriptionPayment, setShowSubscriptionPayment] = useState(false);
+  const [securitySettings, setSecuritySettings] = useState(() => {
+    try {
+      const stored = localStorage.getItem('lumina_security_settings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return { biometric: !!parsed.biometric, remoteWipe: !!parsed.remoteWipe, autoLock: !!parsed.autoLock };
+      }
+    } catch {}
+    return { biometric: true, remoteWipe: false, autoLock: true };
+  });
+
+  const killSwitch = useKillSwitch({
+    lockDayOfMonth: 5,
+    ownerPhone: '841234567',
+    monthName: 'Fevereiro',
+    amountMt: 3500,
+    deviceId: 'LUM-88',
+    supportPhone: '+258 84 XXX XXXX',
+  });
 
   const notify = (msg: string) => {
     setNotification(msg);
@@ -994,6 +993,62 @@ export default function App() {
 
   return (
     <div className="h-screen flex bg-canvas overflow-hidden">
+      {/* Kill Switch: Full-screen overlay when locked */}
+      {killSwitch.state === 'locked' && (
+        <KillSwitchOverlay
+          config={killSwitch.config}
+          isVerifying={showSubscriptionPayment}
+          onPayNow={() => setShowSubscriptionPayment(true)}
+          onCallSupport={() => notify(`${t.killSwitch.callSupport}: ${killSwitch.config.supportPhone}`)}
+          onBack={killSwitch.forceUnlockForDemo}
+          t={t.killSwitch}
+        />
+      )}
+
+      {/* Subscription payment (M-Pesa) when paying from Kill Switch */}
+      <PaymentModal
+        isOpen={showSubscriptionPayment}
+        onClose={() => setShowSubscriptionPayment(false)}
+        amount={killSwitch.config.amountMt}
+        onSuccess={() => {
+          killSwitch.paymentSuccess();
+          setShowSubscriptionPayment(false);
+          notify(t.killSwitch.thankYouReactivated);
+        }}
+        onSwitchToCash={() => setShowSubscriptionPayment(false)}
+        t={{
+          title: t.pos.stkPushTitle,
+          phoneLabel: t.pos.phoneLabel,
+          confirm: t.pos.confirm,
+          invalidNumber: t.pos.invalidNumber,
+          communicating: t.pos.communicating,
+          checkPhone: t.pos.checkPhone,
+          resend: t.pos.resend,
+          paidButNotWorking: t.pos.paidButNotWorking,
+          paymentReceived: t.pos.paymentReceived,
+          tryAgain: t.pos.tryAgain,
+          payCash: t.pos.payCash,
+          saldoInsuficiente: 'Saldo Insuficiente',
+          pinInvalido: 'PIN Inválido',
+          cancelado: 'Cancelado pelo Utilizador',
+          tempoExpirado: 'Tempo Expirado',
+          vodacom: t.pos.vodacom,
+          movitel: t.pos.movitel,
+        }}
+      />
+
+      {/* Grace period: banner (day 1–3 before lock) */}
+      {killSwitch.state === 'gracePeriod' && killSwitch.daysUntilLock >= 1 && (
+        <GracePeriodBanner daysUntilLock={killSwitch.daysUntilLock} t={{ daysUntilBlock: t.killSwitch.daysUntilBlock }} />
+      )}
+
+      {/* Day 4: popup reminder (1 day before lock) */}
+      <Day4ReminderModal
+        isOpen={killSwitch.showDay4Popup}
+        onDismiss={killSwitch.dismissDay4Popup}
+        t={{ day4Title: t.killSwitch.day4Title, day4Message: t.killSwitch.day4Message, dismiss: t.killSwitch.dismiss }}
+      />
+
       {/* Reports Modal */}
       <Modal isOpen={isReportsModalOpen} onClose={() => setIsReportsModalOpen(false)} title={t.reports.exportTitle}>
         <div className="space-y-6 py-2">
@@ -1024,33 +1079,46 @@ export default function App() {
       </Modal>
 
       {/* Security Modal */}
-      <Modal isOpen={isSecurityModalOpen} onClose={() => setIsSecurityModalOpen(false)} title={t.security.settingsTitle}>
+      <Modal isOpen={isSecurityModalOpen} onClose={() => setIsSecurityModalOpen(false)} title={t.modals.securitySettings}>
         <div className="space-y-6 py-2">
           <div className="space-y-4">
             {[
-              { label: t.security.biometric, enabled: true },
-              { label: t.security.remoteWipe, enabled: false },
-              { label: t.security.autoLock, enabled: true },
-            ].map((setting) => (
-              <div key={setting.label} className="flex items-center justify-between p-5 bg-surface rounded-2xl border border-black/[0.03]">
-                <span className="font-bold text-ink">{setting.label}</span>
+              { key: 'biometric' as const, label: t.security.biometric },
+              { key: 'remoteWipe' as const, label: t.security.remoteWipe },
+              { key: 'autoLock' as const, label: t.security.autoLock },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSecuritySettings((s) => ({ ...s, [key]: !s[key] }))}
+                className="w-full flex items-center justify-between p-5 bg-surface rounded-2xl border border-black/[0.03] hover:bg-black/[0.03] transition-colors text-left"
+              >
+                <span className="font-bold text-ink">{label}</span>
                 <div className={cn(
-                  "w-12 h-6 rounded-full relative transition-colors cursor-pointer",
-                  setting.enabled ? "bg-success" : "bg-black/10"
+                  "w-12 h-6 rounded-full relative transition-colors shrink-0",
+                  securitySettings[key] ? "bg-success" : "bg-black/10"
                 )}>
                   <div className={cn(
                     "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
-                    setting.enabled ? "right-1" : "left-1"
+                    securitySettings[key] ? "right-1" : "left-1"
                   )} />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
           <button 
-            onClick={() => setIsSecurityModalOpen(false)}
+            onClick={() => {
+              try {
+                localStorage.setItem('lumina_security_settings', JSON.stringify(securitySettings));
+                notify(t.modals.configSaved);
+                setIsSecurityModalOpen(false);
+              } catch {
+                notify('Erro ao guardar');
+              }
+            }}
             className="w-full py-4 bg-ink text-white rounded-2xl font-bold hover:bg-black/80 transition-all"
           >
-            Save Configuration
+            {t.modals.saveConfig}
           </button>
         </div>
       </Modal>
@@ -1082,42 +1150,14 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Kiosk Mode Lock Screen */}
-      <AnimatePresence>
-        {isLocked && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-ink flex flex-col items-center justify-center text-center p-10"
-          >
-            <div className="space-y-10 relative z-10">
-              <div className="w-24 h-24 bg-danger text-white flex items-center justify-center mx-auto rounded-[32px] shadow-2xl shadow-danger/20">
-                <Lock size={48} weight="bold" />
-              </div>
-              <div className="space-y-4">
-                <h1 className="text-5xl font-black text-white uppercase tracking-tight">{t.security.locked}</h1>
-                <p className="text-white/40 text-sm max-w-md mx-auto leading-relaxed font-medium">
-                  {t.security.restricted}
-                </p>
-              </div>
-              <button 
-                onClick={() => setIsLocked(false)}
-                className="px-10 py-5 bg-white text-ink rounded-2xl font-bold uppercase tracking-widest hover:bg-surface transition-all"
-              >
-                {t.security.unlock}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Grace period banner pushes content down via pt-14 on main */}
 
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
       
       <div className="pl-20 md:pl-24 flex-1 flex flex-col min-w-0">
         <StatusStrip lang={lang} setLang={setLang} t={t} />
         
-        <main className="flex-1 overflow-hidden">
+        <main className={cn("flex-1 overflow-hidden", killSwitch.state === 'gracePeriod' && "pt-14")}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -1170,11 +1210,19 @@ export default function App() {
                   </div>
                   <div className="flex flex-col gap-3 w-full max-w-xs">
                     <button 
-                      onClick={() => setIsLocked(true)}
+                      onClick={killSwitch.forceLockForDemo}
                       className="w-full py-4 bg-danger text-white rounded-2xl font-bold hover:bg-danger/90 transition-all shadow-lg shadow-danger/20"
                     >
                       {t.security.killSwitch}
                     </button>
+                    {killSwitch.state === 'locked' && (
+                      <button 
+                        onClick={killSwitch.forceUnlockForDemo}
+                        className="w-full py-4 bg-success text-white rounded-2xl font-bold text-sm hover:bg-success/90"
+                      >
+                        Unlock (demo)
+                      </button>
+                    )}
                     <button 
                       onClick={() => setIsSecurityModalOpen(true)}
                       className="w-full py-4 bg-white border border-black/[0.05] rounded-2xl font-bold text-sm hover:bg-surface transition-all"
