@@ -1,0 +1,22 @@
+{
+  "name": "Lumina POS",
+  "short_name": "Lumina",
+  "description": "Sistema de ponto de venda para pequenos negócios em Moçambique",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#4A6CF7",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

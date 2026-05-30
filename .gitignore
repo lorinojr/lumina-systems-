@@ -1,8 +1,28 @@
+# Dependencies
 node_modules/
-build/
+
+# Build output
 dist/
-coverage/
-.DS_Store
-*.log
-.env*
+dist-ssr/
+*.local
+
+# Environment — never commit real secrets
+.env
+.env.*
 !.env.example
+
+# AI session data & tooling (not app code)
+.claude/
+.agents/
+skills-lock.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+.vscode/settings.json
+
+# Logs
+*.log
+npm-debug.log*
