@@ -83,9 +83,6 @@ function Sidebar({ active, onChange, canAccess, isAdmin, onLock, onCashierLogout
   const platformActive = active === 'platform' && isPlatformAdmin;
   return (
     <nav className="w-[60px] shrink-0 bg-surface border-r border-black/[0.06] flex flex-col items-center py-3 gap-0.5 z-30">
-      <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center mb-4 shrink-0">
-        <span className="text-white text-[11px] font-black">L</span>
-      </div>
       {visibleItems.map(item => {
         const isActive = active === item.id;
         return (
