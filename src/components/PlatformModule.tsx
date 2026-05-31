@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Buildings, ArrowLeft, Spinner, Warning, ProhibitInset, Key, Backspace,
+  Buildings, ArrowLeft, Spinner, Warning, ProhibitInset, Key, Backspace, Plus, Trash,
 } from '@phosphor-icons/react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -20,6 +20,7 @@ type StoreStatus = 'active' | 'suspended' | 'cancelled';
 interface StoreRow {
   store_id:      string;
   store_name:    string;
+  owner_phone:   string;
   status:        StoreStatus;
   total_revenue: number;
   sale_count:    number;
@@ -95,9 +96,10 @@ function KillToggle({
 }
 
 // ─── Mini PIN pad (4-digit, inline) ──────────────────────────────────────────
-function MiniPinPad({ onComplete, onCancel }: {
-  onComplete: (pin: string) => void;
-  onCancel:   () => void;
+function MiniPinPad({ onComplete, onCancel, cancelLabel = 'Cancelar' }: {
+  onComplete:   (pin: string) => void;
+  onCancel:     () => void;
+  cancelLabel?: string;
 }) {
   const [digits, setDigits] = useState<string[]>([]);
   const press = (d: string) => {
@@ -125,22 +127,198 @@ function MiniPinPad({ onComplete, onCancel }: {
           <Backspace size={12} weight="bold" className="text-muted" />
         </button>
       </div>
-      <button onClick={onCancel} className="mt-2 text-[10px] text-muted hover:text-ink font-semibold transition-colors">Cancelar</button>
+      <button onClick={onCancel} className="mt-2 text-[10px] text-muted hover:text-ink font-semibold transition-colors">{cancelLabel}</button>
+    </div>
+  );
+}
+
+// ─── Create Store Modal ───────────────────────────────────────────────────────
+type CreateStep = 'info' | 'pin1' | 'pin2' | 'saving';
+
+function CreateStoreModal({ onClose, onCreated }: {
+  onClose:   () => void;
+  onCreated: () => void;
+}) {
+  const [cStep,     setCStep]     = useState<CreateStep>('info');
+  const [name,      setName]      = useState('');
+  const [phone,     setPhone]     = useState('');
+  const [pin1,      setPin1]      = useState('');
+  const [errors,    setErrors]    = useState<{ name?: string; phone?: string }>({});
+  const [pinError,  setPinError]  = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  function handleInfoNext(ev: React.FormEvent) {
+    ev.preventDefault();
+    const e: typeof errors = {};
+    if (!name.trim())  e.name  = 'Introduza o nome da loja';
+    if (!phone.trim()) e.phone = 'Introduza o número de telefone';
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+    setPin1('');
+    setPinError('');
+    setSaveError('');
+    setCStep('pin1');
+  }
+
+  function handlePin1(pin: string) {
+    setPin1(pin);
+    setPinError('');
+    setCStep('pin2');
+  }
+
+  async function handlePin2(pin: string) {
+    if (pin !== pin1) {
+      setPinError('As senhas não coincidem. Tente novamente.');
+      setPin1('');
+      setCStep('pin1');
+      return;
+    }
+    setCStep('saving');
+    setSaveError('');
+    try {
+      const { data, error } = await supabase.rpc('register_store', {
+        p_store_name:  name.trim(),
+        p_owner_phone: phone.trim(),
+        p_admin_name:  'Admin',
+        p_admin_pin:   pin,
+      });
+      if (error) throw error;
+      if (!data?.store_id) throw new Error('Resposta inválida do servidor');
+      onCreated();
+    } catch (e: any) {
+      setSaveError(e.message ?? 'Erro ao criar a loja. Verifique a ligação.');
+      setPin1('');
+      setCStep('info');
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'oklch(0 0 0 / 0.45)', backdropFilter: 'blur(4px)' }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[360px] overflow-hidden"
+      >
+        {/* Header */}
+        <div className="px-5 py-4 flex items-center justify-between" style={{ background: P_BG }}>
+          <div className="flex items-center gap-2">
+            <Plus size={14} weight="bold" className="text-white" />
+            <span className="text-[12px] font-black text-white uppercase tracking-wide">Nova Loja</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-6 h-6 flex items-center justify-center text-[16px] font-light transition-colors"
+            style={{ color: P_DIM }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+            onMouseLeave={e => (e.currentTarget.style.color = P_DIM)}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-5">
+          <AnimatePresence mode="wait">
+            {cStep === 'info' && (
+              <motion.form key="info" onSubmit={handleInfoNext}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }} className="flex flex-col gap-4" noValidate
+              >
+                {saveError && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-danger font-semibold">
+                    <Warning size={11} weight="fill" />{saveError}
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-muted uppercase tracking-[0.1em]">Nome da Loja</label>
+                  <input type="text" autoFocus autoComplete="organization"
+                    value={name}
+                    onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: undefined })); }}
+                    placeholder="ex: Farmácia Central"
+                    className={cn('h-11 px-3.5 rounded-xl border bg-surface text-[14px] font-semibold text-ink placeholder:text-muted/40 outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent transition-all',
+                      errors.name ? 'border-danger' : 'border-black/10')}
+                  />
+                  {errors.name && <p className="text-[11px] text-danger font-semibold">{errors.name}</p>}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-muted uppercase tracking-[0.1em]">Telefone do Proprietário</label>
+                  <input type="tel" autoComplete="tel"
+                    value={phone}
+                    onChange={e => { setPhone(e.target.value); setErrors(p => ({ ...p, phone: undefined })); }}
+                    placeholder="ex: 84 123 4567"
+                    className={cn('h-11 px-3.5 rounded-xl border bg-surface text-[14px] font-semibold text-ink placeholder:text-muted/40 outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent transition-all',
+                      errors.phone ? 'border-danger' : 'border-black/10')}
+                  />
+                  {errors.phone && <p className="text-[11px] text-danger font-semibold">{errors.phone}</p>}
+                </div>
+
+                <div className="flex gap-2 mt-1">
+                  <button type="button" onClick={onClose}
+                    className="flex-1 h-10 rounded-xl border border-black/[0.08] text-[13px] font-bold text-muted hover:bg-black/[0.03] transition-colors">
+                    Cancelar
+                  </button>
+                  <motion.button type="submit" whileTap={{ scale: 0.97 }}
+                    className="flex-1 h-10 rounded-xl bg-accent text-white text-[13px] font-bold hover:bg-[oklch(0.42_0.2_250)] transition-colors">
+                    Seguinte
+                  </motion.button>
+                </div>
+              </motion.form>
+            )}
+
+            {(cStep === 'pin1' || cStep === 'pin2') && (
+              <motion.div key={cStep}
+                initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.15 }}
+              >
+                <p className="text-[11px] text-muted font-medium text-center mb-4">
+                  {cStep === 'pin1' ? 'Defina a senha de administrador para' : 'Confirme a senha para'}{' '}
+                  <span className="font-black text-ink">{name}</span>
+                </p>
+                {pinError && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-danger font-semibold mb-3 justify-center">
+                    <Warning size={11} weight="fill" />{pinError}
+                  </div>
+                )}
+                <MiniPinPad
+                  onComplete={cStep === 'pin1' ? handlePin1 : handlePin2}
+                  onCancel={() => { setCStep(cStep === 'pin2' ? 'pin1' : 'info'); setPinError(''); }}
+                  cancelLabel="Voltar"
+                />
+              </motion.div>
+            )}
+
+            {cStep === 'saving' && (
+              <motion.div key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="flex flex-col items-center gap-3 py-8">
+                <Spinner size={24} className="text-accent animate-spin" />
+                <p className="text-[12px] text-muted font-semibold">A criar a loja…</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
     </div>
   );
 }
 
 // ─── Store card ───────────────────────────────────────────────────────────────
 function StoreCard({
-  store, onToggle, onCancel, onResetPin, busy,
+  store, onToggle, onCancel, onResetPin, onDelete, busy,
 }: {
   store:       StoreRow;
   onToggle:    () => void | Promise<void>;
   onCancel:    () => void | Promise<void>;
   onResetPin:  (newPin: string) => Promise<void>;
+  onDelete:    () => Promise<void>;
   busy:        boolean;
 }) {
   const [confirming,    setConfirming]    = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
   const [resettingPin,  setResettingPin]  = useState(false);
   const [pinBusy,       setPinBusy]       = useState(false);
   const [pinDone,       setPinDone]       = useState(false);
@@ -160,6 +338,8 @@ function StoreCard({
     }
   };
 
+  const anyPanelOpen = confirming || deleting || resettingPin;
+
   return (
     <div className={cn(
       'bg-white rounded-xl border border-black/[0.06] overflow-hidden transition-shadow',
@@ -171,7 +351,9 @@ function StoreCard({
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0">
             <div className="text-[13px] font-bold text-ink leading-tight truncate">{store.store_name}</div>
-            <div className="text-[11px] text-muted font-medium mt-0.5">Há {fmtAge(store.created_at)}</div>
+            <div className="text-[11px] text-muted font-medium mt-0.5">
+              {store.owner_phone} · Há {fmtAge(store.created_at)}
+            </div>
           </div>
           <StatusBadge status={store.status} />
         </div>
@@ -199,23 +381,35 @@ function StoreCard({
              store.status === 'suspended' ? 'Sistema suspenso' : 'Conta cancelada'}
           </span>
           <div className="flex items-center gap-3">
-            {store.status !== 'cancelled' && !confirming && !resettingPin && (
-              <button
-                onClick={() => { setResettingPin(true); setPinDone(false); setPinError(''); }}
-                className="text-[10px] font-bold text-muted/60 hover:text-accent transition-colors"
-                title="Repor senha de administrador"
-              >
-                <Key size={11} weight="bold" className="inline mr-0.5" />
-                Repor Senha
-              </button>
-            )}
-            {store.status === 'suspended' && !confirming && !resettingPin && (
-              <button
-                onClick={() => setConfirming(true)}
-                className="text-[10px] font-bold text-danger/60 hover:text-danger transition-colors underline underline-offset-2"
-              >
-                Cancelar Conta
-              </button>
+            {!anyPanelOpen && (
+              <>
+                {store.status !== 'cancelled' && (
+                  <button
+                    onClick={() => { setResettingPin(true); setPinDone(false); setPinError(''); }}
+                    className="text-[10px] font-bold text-muted/60 hover:text-accent transition-colors"
+                    title="Repor senha de administrador"
+                  >
+                    <Key size={11} weight="bold" className="inline mr-0.5" />
+                    Repor Senha
+                  </button>
+                )}
+                {store.status === 'suspended' && (
+                  <button
+                    onClick={() => setConfirming(true)}
+                    className="text-[10px] font-bold text-danger/60 hover:text-danger transition-colors underline underline-offset-2"
+                  >
+                    Cancelar Conta
+                  </button>
+                )}
+                <button
+                  onClick={() => setDeleting(true)}
+                  className="text-[10px] font-bold text-danger/40 hover:text-danger transition-colors"
+                  title="Eliminar loja permanentemente"
+                >
+                  <Trash size={11} weight="bold" className="inline mr-0.5" />
+                  Eliminar
+                </button>
+              </>
             )}
             <KillToggle status={store.status} onToggle={onToggle} busy={busy} />
           </div>
@@ -301,6 +495,45 @@ function StoreCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Delete confirmation panel ── */}
+      <AnimatePresence>
+        {deleting && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mx-4 mb-4 rounded-xl bg-danger/[0.05] border border-danger/20 p-3.5 space-y-3">
+              <div className="flex items-start gap-2">
+                <Trash size={14} weight="fill" className="text-danger shrink-0 mt-0.5" />
+                <p className="text-[11px] font-semibold text-danger leading-snug">
+                  Eliminar <span className="font-black">{store.store_name}</span>?
+                  Se tiver vendas registadas, a conta será cancelada mas os dados ficam guardados.
+                  Caso contrário, todos os dados serão apagados.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDeleting(false)}
+                  className="flex-1 py-2 rounded-lg border border-black/[0.08] text-[11px] font-bold text-muted hover:bg-black/[0.04] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => { setDeleting(false); await onDelete(); }}
+                  disabled={busy}
+                  className="flex-1 py-2 rounded-lg bg-danger text-white text-[11px] font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
+                >
+                  Confirmar Eliminação
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -312,10 +545,11 @@ interface Props {
 }
 
 export function PlatformModule({ adminName, onLogout }: Props) {
-  const [stores,   setStores]   = useState<StoreRow[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
-  const [busyId,   setBusyId]   = useState<string | null>(null);
+  const [stores,     setStores]     = useState<StoreRow[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
+  const [busyId,     setBusyId]     = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   const loadStores = useCallback(async () => {
     setLoading(true);
@@ -366,6 +600,31 @@ export function PlatformModule({ adminName, onLogout }: Props) {
       p_new_pin:  newPin,
     });
     if (rpcErr) throw rpcErr;
+  };
+
+  const deleteStore = async (store: StoreRow) => {
+    if (busyId) return;
+    setBusyId(store.store_id);
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('delete_store', {
+        p_store_id: store.store_id,
+      });
+      if (rpcErr) throw rpcErr;
+      const result = data as any;
+      if (result?.action === 'deleted') {
+        // Hard-deleted — remove from list
+        setStores(prev => prev.filter(s => s.store_id !== store.store_id));
+      } else {
+        // Soft-cancelled (had sales) — update status in list
+        setStores(prev => prev.map(s =>
+          s.store_id === store.store_id ? { ...s, status: 'cancelled' } : s,
+        ));
+      }
+    } catch (e: any) {
+      setError(e.message ?? 'Erro ao eliminar loja');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const nActive    = stores.filter(s => s.status === 'active').length;
@@ -452,8 +711,20 @@ export function PlatformModule({ adminName, onLogout }: Props) {
 
         {/* Stores grid */}
         <div>
-          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-2.5">
-            Lojas {!loading && `(${stores.length})`}
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="text-[10px] font-black text-muted uppercase tracking-widest">
+              Lojas {!loading && `(${stores.length})`}
+            </div>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-colors"
+              style={{ background: P_PILL }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'oklch(0.44 0.20 280)')}
+              onMouseLeave={e => (e.currentTarget.style.background = P_PILL)}
+            >
+              <Plus size={11} weight="bold" />
+              Nova Loja
+            </button>
           </div>
 
           {loading ? (
@@ -462,10 +733,19 @@ export function PlatformModule({ adminName, onLogout }: Props) {
               <span className="text-[13px] font-semibold">A carregar lojas…</span>
             </div>
           ) : stores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
               <Buildings size={32} weight="light" className="text-muted/40" />
               <p className="text-[13px] text-muted font-semibold">Nenhuma loja registada</p>
-              <p className="text-[11px] text-muted/60">As lojas aparecerão aqui após o registo.</p>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold text-white transition-colors"
+                style={{ background: P_PILL }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'oklch(0.44 0.20 280)')}
+                onMouseLeave={e => (e.currentTarget.style.background = P_PILL)}
+              >
+                <Plus size={12} weight="bold" />
+                Criar primeira loja
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -476,6 +756,7 @@ export function PlatformModule({ adminName, onLogout }: Props) {
                     onToggle={() => toggleStatus(store)}
                     onCancel={() => cancelStore(store)}
                     onResetPin={(pin) => resetAdminPin(store, pin)}
+                    onDelete={() => deleteStore(store)}
                     busy={busyId === store.store_id}
                   />
                 </React.Fragment>
@@ -485,6 +766,16 @@ export function PlatformModule({ adminName, onLogout }: Props) {
         </div>
 
       </div>
+
+      {/* ── Create Store Modal ────────────────────────────────── */}
+      <AnimatePresence>
+        {showCreate && (
+          <CreateStoreModal
+            onClose={() => setShowCreate(false)}
+            onCreated={() => { setShowCreate(false); loadStores(); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

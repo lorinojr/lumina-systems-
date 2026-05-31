@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Backspace, Warning, Spinner, Buildings, ArrowLeft } from '@phosphor-icons/react';
+import { Backspace, Warning, Spinner, ArrowLeft } from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
 import type { StoreConfig } from '../hooks/useStoreConfig';
 
@@ -12,13 +12,10 @@ interface Props {
 }
 
 // ─── Step types ──────────────────────────────────────────────────────────────
-type Step =
-  | 'choice'
-  | 'info' | 'pin1' | 'pin2' | 'saving'
-  | 'login-phone' | 'login-pin' | 'login-saving';
+type Step = 'phone' | 'pin' | 'saving';
 
 export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
-  const [step, setStep] = useState<Step>('choice');
+  const [step, setStep] = useState<Step>('phone');
 
   // ── Hidden platform access (5 clicks on logo) ─────────────────────────────
   const clickCountRef = useRef(0);
@@ -35,76 +32,27 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
     }
   };
 
-  // ── New-store state ────────────────────────────────────────────────────────
-  const [storeName,   setStoreName]   = useState('');
-  const [ownerPhone,  setOwnerPhone]  = useState('');
-  const [errors,      setErrors]      = useState<{ storeName?: string; ownerPhone?: string }>({});
-  const [pin1,        setPin1]        = useState('');
-  const [pinError,    setPinError]    = useState('');
-  const [saveError,   setSaveError]   = useState('');
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [phone,      setPhone]      = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [loginError, setLoginError] = useState('');
 
-  // ── Existing-store state ───────────────────────────────────────────────────
-  const [loginPhone,  setLoginPhone]  = useState('');
-  const [loginPhoneError, setLoginPhoneError] = useState('');
-  const [loginError,  setLoginError]  = useState('');
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  function validateInfo() {
-    const e: typeof errors = {};
-    if (!storeName.trim())  e.storeName  = 'Introduza o nome da loja';
-    if (!ownerPhone.trim()) e.ownerPhone = 'Introduza o número de telefone';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  function handleInfoNext(ev: React.FormEvent) {
+  // ── Phone step ────────────────────────────────────────────────────────────
+  function handlePhoneNext(ev: React.FormEvent) {
     ev.preventDefault();
-    if (!validateInfo()) return;
-    setStep('pin1');
-  }
-
-  function handlePin1(pin: string) { setPin1(pin); setPinError(''); setStep('pin2'); }
-
-  async function handlePin2(pin: string) {
-    if (pin !== pin1) {
-      setPinError('As senhas não coincidem. Tente novamente.');
-      setPin1('');
-      setStep('pin1');
-      return;
-    }
-    setStep('saving');
-    setSaveError('');
-    try {
-      const { data, error } = await supabase.rpc('register_store', {
-        p_store_name:  storeName.trim(),
-        p_owner_phone: ownerPhone.trim(),
-        p_admin_name:  'Admin',
-        p_admin_pin:   pin,
-      });
-      if (error) throw error;
-      onComplete({ storeId: data.store_id, storeName: storeName.trim(), ownerPhone: ownerPhone.trim() });
-    } catch (e: any) {
-      setSaveError(e.message ?? 'Erro ao criar a loja. Verifique a ligação.');
-      setStep('pin1');
-      setPin1('');
-    }
-  }
-
-  // ── Existing-store login ───────────────────────────────────────────────────
-  function handleLoginPhoneNext(ev: React.FormEvent) {
-    ev.preventDefault();
-    if (!loginPhone.trim()) { setLoginPhoneError('Introduza o número de telefone'); return; }
-    setLoginPhoneError('');
+    if (!phone.trim()) { setPhoneError('Introduza o número de telefone'); return; }
+    setPhoneError('');
     setLoginError('');
-    setStep('login-pin');
+    setStep('pin');
   }
 
-  async function handleLoginPin(pin: string) {
-    setStep('login-saving');
+  // ── PIN step ──────────────────────────────────────────────────────────────
+  async function handlePin(pin: string) {
+    setStep('saving');
     setLoginError('');
     try {
       const { data, error } = await supabase.rpc('login_store', {
-        p_owner_phone: loginPhone.trim(),
+        p_owner_phone: phone.trim(),
         p_admin_pin:   pin,
       });
       if (error) throw error;
@@ -113,26 +61,20 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
           ? 'Nenhuma loja encontrada com este número.'
           : 'Senha incorrecta. Tente novamente.';
         setLoginError(msg);
-        setStep('login-pin');
+        setStep('pin');
         return;
       }
       onComplete({ storeId: data.store_id, storeName: data.store_name, ownerPhone: data.owner_phone });
     } catch (e: any) {
       setLoginError(e.message ?? 'Erro de ligação. Tente novamente.');
-      setStep('login-pin');
+      setStep('pin');
     }
   }
 
-  // ── Subtitle by step ──────────────────────────────────────────────────────
   const subtitle = {
-    choice:        'O que pretende fazer?',
-    info:          'Vamos configurar a sua loja',
-    pin1:          'Defina a senha de administrador',
-    pin2:          'Defina a senha de administrador',
-    saving:        'A criar a loja…',
-    'login-phone': 'Aceder a uma loja existente',
-    'login-pin':   'Aceder a uma loja existente',
-    'login-saving':'A verificar credenciais…',
+    phone:  'Acesso à loja',
+    pin:    'Acesso à loja',
+    saving: 'A verificar credenciais…',
   }[step];
 
   return (
@@ -160,114 +102,10 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
 
         <AnimatePresence mode="wait">
 
-          {/* ── Choice screen ─────────────────────────────────────── */}
-          {step === 'choice' && (
-            <motion.div key="choice"
+          {/* ── Phone ─────────────────────────────────────────────── */}
+          {step === 'phone' && (
+            <motion.form key="phone" onSubmit={handlePhoneNext}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-3"
-            >
-              <button
-                onClick={() => setStep('info')}
-                className="w-full flex items-center gap-4 px-5 py-4 bg-white rounded-2xl border border-black/[0.07] hover:border-accent/40 hover:shadow-md hover:shadow-accent/[0.08] active:scale-[0.98] transition-all text-left"
-              >
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                  <span className="text-accent text-lg font-black">+</span>
-                </div>
-                <div>
-                  <div className="text-[14px] font-black text-ink leading-tight">Nova loja</div>
-                  <div className="text-[11px] text-muted font-medium mt-0.5">Registar pela primeira vez</div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => setStep('login-phone')}
-                className="w-full flex items-center gap-4 px-5 py-4 bg-white rounded-2xl border border-black/[0.07] hover:border-black/[0.15] hover:shadow-sm active:scale-[0.98] transition-all text-left"
-              >
-                <div className="w-10 h-10 rounded-xl bg-black/[0.04] flex items-center justify-center shrink-0">
-                  <Buildings size={18} weight="duotone" className="text-muted" />
-                </div>
-                <div>
-                  <div className="text-[14px] font-black text-ink leading-tight">Já tenho uma loja</div>
-                  <div className="text-[11px] text-muted font-medium mt-0.5">Aceder com telefone e senha</div>
-                </div>
-              </button>
-            </motion.div>
-          )}
-
-          {/* ── New store: info ────────────────────────────────────── */}
-          {step === 'info' && (
-            <motion.form key="info" onSubmit={handleInfoNext}
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-5" noValidate
-            >
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="onb-storeName" className="text-[10px] font-bold text-muted uppercase tracking-[0.1em]">Nome da Loja</label>
-                <input id="onb-storeName" type="text" autoFocus autoComplete="organization"
-                  value={storeName}
-                  onChange={e => { setStoreName(e.target.value); setErrors(p => ({ ...p, storeName: undefined })); }}
-                  placeholder="ex: Farmácia Central"
-                  className={`h-12 px-4 rounded-xl border bg-white text-[15px] font-semibold text-ink placeholder:text-muted/40 outline-none transition-all focus:ring-2 focus:ring-accent/25 focus:border-accent ${errors.storeName ? 'border-danger' : 'border-black/10'}`}
-                />
-                {errors.storeName && <p className="text-[11px] text-danger font-semibold leading-tight">{errors.storeName}</p>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="onb-phone" className="text-[10px] font-bold text-muted uppercase tracking-[0.1em]">Telefone do Proprietário</label>
-                <input id="onb-phone" type="tel" autoComplete="tel"
-                  value={ownerPhone}
-                  onChange={e => { setOwnerPhone(e.target.value); setErrors(p => ({ ...p, ownerPhone: undefined })); }}
-                  placeholder="ex: 84 123 4567"
-                  className={`h-12 px-4 rounded-xl border bg-white text-[15px] font-semibold text-ink placeholder:text-muted/40 outline-none transition-all focus:ring-2 focus:ring-accent/25 focus:border-accent ${errors.ownerPhone ? 'border-danger' : 'border-black/10'}`}
-                />
-                {errors.ownerPhone && <p className="text-[11px] text-danger font-semibold leading-tight">{errors.ownerPhone}</p>}
-              </div>
-
-              <div className="flex gap-2 mt-1">
-                <button type="button" onClick={() => setStep('choice')}
-                  className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-black/[0.08] text-[13px] font-bold text-muted hover:bg-black/[0.03] transition-colors">
-                  <ArrowLeft size={13} weight="bold" />
-                </button>
-                <motion.button type="submit" whileTap={{ scale: 0.97 }}
-                  className="flex-1 h-12 rounded-xl bg-accent text-white text-[15px] font-bold tracking-wide hover:bg-[oklch(0.42_0.2_250)] active:bg-[oklch(0.38_0.2_250)] transition-colors">
-                  Seguinte
-                </motion.button>
-              </div>
-            </motion.form>
-          )}
-
-          {/* ── New store: PIN steps ───────────────────────────────── */}
-          {(step === 'pin1' || step === 'pin2') && (
-            <motion.div key={step}
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              {saveError && (
-                <div className="flex items-center gap-1.5 text-[11px] text-danger font-semibold mb-4">
-                  <Warning size={11} weight="fill" />{saveError}
-                </div>
-              )}
-              {pinError && (
-                <div className="flex items-center gap-1.5 text-[11px] text-danger font-semibold mb-4">
-                  <Warning size={11} weight="fill" />{pinError}
-                </div>
-              )}
-              <PINPad
-                label={step === 'pin1' ? 'Senha (4 dígitos)' : 'Confirmar Senha'}
-                onComplete={step === 'pin1' ? handlePin1 : handlePin2}
-              />
-              <button onClick={() => { setStep(step === 'pin2' ? 'pin1' : 'info'); setPinError(''); setSaveError(''); }}
-                className="mt-5 text-[11px] text-muted hover:text-ink font-semibold transition-colors flex items-center gap-1.5">
-                <ArrowLeft size={11} weight="bold" /> Voltar
-              </button>
-            </motion.div>
-          )}
-
-          {/* ── Existing store: phone ──────────────────────────────── */}
-          {step === 'login-phone' && (
-            <motion.form key="login-phone" onSubmit={handleLoginPhoneNext}
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-5" noValidate
             >
@@ -276,30 +114,24 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
                   Telefone do Proprietário
                 </label>
                 <input id="login-phone-input" type="tel" autoFocus autoComplete="tel"
-                  value={loginPhone}
-                  onChange={e => { setLoginPhone(e.target.value); setLoginPhoneError(''); }}
+                  value={phone}
+                  onChange={e => { setPhone(e.target.value); setPhoneError(''); }}
                   placeholder="ex: 84 123 4567"
-                  className={`h-12 px-4 rounded-xl border bg-white text-[15px] font-semibold text-ink placeholder:text-muted/40 outline-none transition-all focus:ring-2 focus:ring-accent/25 focus:border-accent ${loginPhoneError ? 'border-danger' : 'border-black/10'}`}
+                  className={`h-12 px-4 rounded-xl border bg-white text-[15px] font-semibold text-ink placeholder:text-muted/40 outline-none transition-all focus:ring-2 focus:ring-accent/25 focus:border-accent ${phoneError ? 'border-danger' : 'border-black/10'}`}
                 />
-                {loginPhoneError && <p className="text-[11px] text-danger font-semibold leading-tight">{loginPhoneError}</p>}
+                {phoneError && <p className="text-[11px] text-danger font-semibold leading-tight">{phoneError}</p>}
               </div>
 
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setStep('choice')}
-                  className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-black/[0.08] text-[13px] font-bold text-muted hover:bg-black/[0.03] transition-colors">
-                  <ArrowLeft size={13} weight="bold" />
-                </button>
-                <motion.button type="submit" whileTap={{ scale: 0.97 }}
-                  className="flex-1 h-12 rounded-xl bg-accent text-white text-[15px] font-bold tracking-wide hover:bg-[oklch(0.42_0.2_250)] transition-colors">
-                  Seguinte
-                </motion.button>
-              </div>
+              <motion.button type="submit" whileTap={{ scale: 0.97 }}
+                className="w-full h-12 rounded-xl bg-accent text-white text-[15px] font-bold tracking-wide hover:bg-[oklch(0.42_0.2_250)] active:bg-[oklch(0.38_0.2_250)] transition-colors">
+                Seguinte
+              </motion.button>
             </motion.form>
           )}
 
-          {/* ── Existing store: PIN ────────────────────────────────── */}
-          {step === 'login-pin' && (
-            <motion.div key="login-pin"
+          {/* ── PIN ───────────────────────────────────────────────── */}
+          {step === 'pin' && (
+            <motion.div key="pin"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
@@ -308,22 +140,20 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
                   <Warning size={11} weight="fill" />{loginError}
                 </div>
               )}
-              <PINPad label="Senha de Administrador" onComplete={handleLoginPin} />
-              <button onClick={() => { setStep('login-phone'); setLoginError(''); }}
+              <PINPad label="Senha de Administrador" onComplete={handlePin} />
+              <button onClick={() => { setStep('phone'); setLoginError(''); }}
                 className="mt-5 text-[11px] text-muted hover:text-ink font-semibold transition-colors flex items-center gap-1.5">
                 <ArrowLeft size={11} weight="bold" /> Voltar
               </button>
             </motion.div>
           )}
 
-          {/* ── Saving / verifying ────────────────────────────────── */}
-          {(step === 'saving' || step === 'login-saving') && (
+          {/* ── Saving ────────────────────────────────────────────── */}
+          {step === 'saving' && (
             <motion.div key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="flex flex-col items-center gap-4 py-8">
               <Spinner size={28} className="text-accent animate-spin" />
-              <p className="text-[13px] text-muted font-semibold">
-                {step === 'saving' ? 'A criar a loja…' : 'A verificar credenciais…'}
-              </p>
+              <p className="text-[13px] text-muted font-semibold">A verificar credenciais…</p>
             </motion.div>
           )}
 
