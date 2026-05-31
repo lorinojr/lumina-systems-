@@ -88,15 +88,12 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
         className="w-full max-w-[340px]"
       >
-        {/* Logo */}
+        {/* Header */}
         <div className="flex flex-col items-center mb-10">
-          <div
+          <h1
             onClick={handleLogoClick}
-            className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center mb-5 shadow-[0_4px_16px_oklch(0.45_0.2_250/.25)] cursor-default select-none"
-          >
-            <span className="text-white text-2xl font-black tracking-tight">L</span>
-          </div>
-          <h1 className="text-[28px] font-black text-ink leading-none mb-2 tracking-tight">Lumina POS</h1>
+            className="text-[28px] font-black text-ink leading-none mb-2 tracking-tight cursor-default select-none"
+          >Lumina POS</h1>
           <p className="text-[13px] text-muted font-medium text-center">{subtitle}</p>
         </div>
 
