@@ -5,11 +5,11 @@ export type KillSwitchState = 'active' | 'gracePeriod' | 'locked' | 'loading';
 
 export interface KillSwitchConfig {
   lockDayOfMonth: number;
-  ownerPhone: string;
-  deviceId: string;
-  supportPhone: string;
-  amountMt: number;
-  monthName: string;
+  ownerPhone:     string;
+  deviceId:       string;
+  supportPhone:   string;
+  amountMt:       number;
+  monthName:      string;
 }
 
 const MONTH_NAMES_PT = [
@@ -17,20 +17,34 @@ const MONTH_NAMES_PT = [
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ];
 
+const SUPPORT_PHONE = import.meta.env.VITE_SUPPORT_PHONE ?? '+258 84 000 0000';
+
+function getDeviceId(): string {
+  const KEY = 'lumina_device_id';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2).toUpperCase();
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
 export function useKillSwitch(storeId: string | null, ownerPhone: string) {
-  const [state, setState] = useState<KillSwitchState>('loading');
-  const [daysRemaining, setDaysRemaining] = useState(30);
-  const [amountMt, setAmountMt] = useState(3500);
-  const [lockDay, setLockDay] = useState(5);
-  const [showDay4Popup, setShowDay4Popup] = useState(false);
+  const [state,          setState]          = useState<KillSwitchState>('loading');
+  const [daysRemaining,  setDaysRemaining]  = useState(30);
+  const [amountMt,       setAmountMt]       = useState(3500);
+  const [lockDay,        setLockDay]        = useState(5);
+  const [showDay4Popup,  setShowDay4Popup]  = useState(false);
 
   const config: KillSwitchConfig = useMemo(() => ({
     lockDayOfMonth: lockDay,
     ownerPhone,
-    deviceId: 'LUM-88',
-    supportPhone: '+258 84 XXX XXXX',
+    deviceId:     getDeviceId(),
+    supportPhone: SUPPORT_PHONE,
     amountMt,
-    monthName: MONTH_NAMES_PT[new Date().getMonth()],
+    monthName:    MONTH_NAMES_PT[new Date().getMonth()],
   }), [lockDay, ownerPhone, amountMt]);
 
   const checkStatus = useCallback(async () => {
@@ -43,8 +57,9 @@ export function useKillSwitch(storeId: string | null, ownerPhone: string) {
       setLockDay(data.lock_day_of_month ?? 5);
       setDaysRemaining(data.days_remaining ?? 30);
 
-      if (data.status === 'locked') setState('locked');
-      else if (data.status === 'grace_period') {
+      if (data.status === 'locked') {
+        setState('locked');
+      } else if (data.status === 'grace_period') {
         setState('gracePeriod');
         if (data.days_remaining <= 1) setShowDay4Popup(true);
       } else {
@@ -72,9 +87,6 @@ export function useKillSwitch(storeId: string | null, ownerPhone: string) {
 
   const dismissDay4Popup = useCallback(() => setShowDay4Popup(false), []);
 
-  const forceLockForDemo = useCallback(() => setState('locked'), []);
-  const forceUnlockForDemo = useCallback(() => { setState('active'); setDaysRemaining(30); }, []);
-
   return {
     state,
     config,
@@ -82,8 +94,6 @@ export function useKillSwitch(storeId: string | null, ownerPhone: string) {
     showDay4Popup,
     dismissDay4Popup,
     paymentSuccess,
-    forceLockForDemo,
-    forceUnlockForDemo,
     checkStatus,
   };
 }

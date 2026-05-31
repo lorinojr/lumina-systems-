@@ -26,6 +26,7 @@ import { OnboardingScreen }     from './components/OnboardingScreen';
 import { AdminLoginModal }      from './components/AdminLoginModal';
 import { CashierLoginScreen }    from './components/CashierLoginScreen';
 import { PlatformLoginModal }   from './components/PlatformLoginModal';
+import { ErrorBoundary }        from './components/ErrorBoundary';
 
 const InventoryModule = lazy(() => import('./components/InventoryModule').then(m => ({ default: m.InventoryModule })));
 const ReportsModule   = lazy(() => import('./components/ReportsModule').then(m => ({ default: m.ReportsModule })));
@@ -185,7 +186,8 @@ export default function App() {
   const platformAuth = usePlatformAuth();
 
   const [activeModule, setActiveModule] = useState<ActiveModule>('pos');
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [sales, setSales] = useState<Sale[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -209,20 +211,24 @@ export default function App() {
     if (!config?.storeId) return;
     api.checkHealth().then(ok => {
       setBackendOnline(ok);
-      if (!ok) return;
-      api.fetchProducts().then(ps => { if (ps.length > 0) setProducts(ps); }).catch(console.error);
+      if (!ok) { setProductsLoading(false); return; }
+      api.fetchProducts()
+        .then(ps => { setProducts(ps); })
+        .catch(console.error)
+        .finally(() => setProductsLoading(false));
       api.fetchSales().then(ss => setSales(ss)).catch(console.error);
       api.nextSaleNumber().then(n => setSaleNo(n)).catch(console.error);
     });
   }, [config?.storeId]);
 
-  // ── Realtime subscriptions ─────────────────────────────────────
+  // ── Realtime subscriptions (scoped to this store) ──────────────
   useEffect(() => {
     if (!config?.storeId || !backendOnline) return;
-    const prodSub = api.subscribeProducts(() => {
-      api.fetchProducts().then(ps => { if (ps.length > 0) setProducts(ps); }).catch(console.error);
+    const storeId = config.storeId;
+    const prodSub = api.subscribeProducts(storeId, () => {
+      api.fetchProducts().then(ps => setProducts(ps)).catch(console.error);
     });
-    const saleSub = api.subscribeSales(() => {
+    const saleSub = api.subscribeSales(storeId, () => {
       api.fetchSales().then(ss => setSales(ss)).catch(console.error);
     });
     return () => { prodSub.unsubscribe(); saleSub.unsubscribe(); };
@@ -274,8 +280,8 @@ export default function App() {
 
   const notify = useCallback((msg: string) => { setNotification(msg); setTimeout(() => setNotification(null), 3500); }, []);
 
-  const handlePlatformLogin = useCallback((username: string, pin: string): boolean => {
-    const ok = platformAuth.loginPlatformAdmin(username, pin);
+  const handlePlatformLogin = useCallback(async (username: string, pin: string): Promise<boolean> => {
+    const ok = await platformAuth.loginPlatformAdmin(username, pin);
     if (ok) setActiveModule('platform');
     return ok;
   }, [platformAuth]);
@@ -368,7 +374,6 @@ export default function App() {
         <KillSwitchOverlay
           config={killSwitch.config}
           onCallSupport={() => notify(`Suporte: ${killSwitch.config.supportPhone}`)}
-          onBack={killSwitch.forceUnlockForDemo}
         />
       )}
       <Day4ReminderModal isOpen={killSwitch.showDay4Popup} onDismiss={killSwitch.dismissDay4Popup}
@@ -471,8 +476,10 @@ export default function App() {
             transition={{ duration: 0.12 }}
             className="flex-1 min-w-0 flex flex-col overflow-hidden">
             <Suspense fallback={<ModuleLoader />}>
+              <ErrorBoundary>
               {activeModule === 'pos' && (
-                <POSModule products={products} sales={sales} onSaleComplete={recordSale}
+                <POSModule products={products}
+                  sales={sales} onSaleComplete={recordSale}
                   onNotify={notify} onAddProduct={saveProduct}
                   currentUserId={auth.currentUser.id} currentUserName={auth.currentUser.name}
                   storeName={config.storeName}
@@ -481,30 +488,41 @@ export default function App() {
                   t={{}} />
               )}
               {activeModule === 'inventory' && (
-                <InventoryModule products={products} onSaveProduct={saveProduct}
-                  onUpdateStock={updateStock} onNotify={notify}
-                  onBulkImport={() => setShowBulkImport(true)} />
+                <ErrorBoundary fallbackLabel="Erro no Inventário">
+                  <InventoryModule products={products} onSaveProduct={saveProduct}
+                    onUpdateStock={updateStock} onNotify={notify}
+                    onBulkImport={() => setShowBulkImport(true)} />
+                </ErrorBoundary>
               )}
               {activeModule === 'reports' && (
-                <ReportsModule products={products} sales={sales} onNotify={notify} />
+                <ErrorBoundary fallbackLabel="Erro nos Relatórios">
+                  <ReportsModule products={products} sales={sales} onNotify={notify} />
+                </ErrorBoundary>
               )}
               {activeModule === 'security' && (
-                <SecurityModule config={config} clearConfig={clearConfig}
-                  onChangePIN={auth.changePIN}
-                  onUpdateStoreInfo={handleUpdateStoreInfo}
-                  onNotify={notify} />
+                <ErrorBoundary fallbackLabel="Erro nas Definições">
+                  <SecurityModule config={config} clearConfig={clearConfig}
+                    onChangePIN={auth.changePIN}
+                    onUpdateStoreInfo={handleUpdateStoreInfo}
+                    onNotify={notify} />
+                </ErrorBoundary>
               )}
               {activeModule === 'team' && (
-                <TeamModule cashiers={auth.cashiers} onAddCashier={auth.addCashier}
-                  onChangePIN={auth.changeCashierPIN} onRemoveCashier={auth.removeCashier}
-                  onNotify={notify} />
+                <ErrorBoundary fallbackLabel="Erro na Equipa">
+                  <TeamModule cashiers={auth.cashiers} onAddCashier={auth.addCashier}
+                    onChangePIN={auth.changeCashierPIN} onRemoveCashier={auth.removeCashier}
+                    onNotify={notify} />
+                </ErrorBoundary>
               )}
               {activeModule === 'platform' && platformAuth.isPlatformAdmin && (
-                <PlatformModule
-                  adminName={platformAuth.platformName ?? 'Operador'}
-                  onLogout={handlePlatformLogout}
-                />
+                <ErrorBoundary fallbackLabel="Erro na Plataforma">
+                  <PlatformModule
+                    adminName={platformAuth.platformName ?? 'Operador'}
+                    onLogout={handlePlatformLogout}
+                  />
+                </ErrorBoundary>
               )}
+              </ErrorBoundary>
             </Suspense>
           </motion.div>
         </AnimatePresence>

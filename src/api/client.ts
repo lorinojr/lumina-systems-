@@ -226,30 +226,40 @@ export async function saveReconciliation(rec: CashReconciliation): Promise<boole
 // ── Bulk product import ──────────────────────────────────────────────────────
 
 export async function bulkUpsertProducts(products: Product[]): Promise<number> {
-  if (!_storeId) return 0;
-  let count = 0;
-  for (const p of products) {
-    try {
-      await upsertProduct(p);
-      count++;
-    } catch { /* skip failed */ }
-  }
-  return count;
+  if (!_storeId || products.length === 0) return 0;
+  const rows = products.map(p => ({
+    id: p.id, barcode: p.barcode, name: p.name, price: p.price,
+    cost_price: p.costPrice, stock: p.stock, min_stock: p.minStock,
+    category: p.category, unit: p.unit,
+    tax_exempt: p.taxExempt ?? false,
+    requires_prescription: p.requiresPrescription ?? false,
+    updated_at: new Date().toISOString(),
+    store_id: _storeId,
+  }));
+  const { error } = await supabase.from('products').upsert(rows);
+  if (error) throw new Error(`bulkUpsertProducts: ${error.message}`);
+  return rows.length;
 }
 
 // ── Realtime ─────────────────────────────────────────────────────────────────
 
-export function subscribeProducts(onUpdate: () => void) {
+export function subscribeProducts(storeId: string, onUpdate: () => void) {
   return supabase
-    .channel('products-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, onUpdate)
+    .channel(`products-${storeId}`)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'products',
+      filter: `store_id=eq.${storeId}`,
+    }, onUpdate)
     .subscribe();
 }
 
-export function subscribeSales(onUpdate: () => void) {
+export function subscribeSales(storeId: string, onUpdate: () => void) {
   return supabase
-    .channel('sales-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, onUpdate)
+    .channel(`sales-${storeId}`)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'sales',
+      filter: `store_id=eq.${storeId}`,
+    }, onUpdate)
     .subscribe();
 }
 

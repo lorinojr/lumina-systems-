@@ -1,35 +1,22 @@
-import { useState, useCallback, useEffect } from 'react';
-
-const STORAGE_KEY  = 'lumina_platform_key_v2';
-const DEFAULT_USER = 'lorenserodriguesjunior@gmail.com';
-const DEFAULT_PIN  = '12345678';
-
-function encode(username: string, pin: string): string {
-  return btoa(`platform:${username.toLowerCase().trim()}:${pin}:lumina`);
-}
+import { useState, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 
 export function usePlatformAuth() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [platformName,    setPlatformName]    = useState<string | null>(null);
 
-  // Seed default credentials on first run
-  useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      localStorage.setItem(STORAGE_KEY, encode(DEFAULT_USER, DEFAULT_PIN));
-    }
-  }, []);
-
-  /** Returns true if credentials match the stored key */
-  const loginPlatformAdmin = useCallback((username: string, pin: string): boolean => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored || !username.trim() || !pin) return false;
+  /** Verifies credentials against the server-side platform_admins table. */
+  const loginPlatformAdmin = useCallback(async (email: string, pin: string): Promise<boolean> => {
+    if (!email.trim() || !pin) return false;
     try {
-      const ok = stored === encode(username, pin);
-      if (ok) {
-        setIsPlatformAdmin(true);
-        setPlatformName(username.trim());
-      }
-      return ok;
+      const { data, error } = await supabase.rpc('authenticate_platform_admin', {
+        p_email: email.trim().toLowerCase(),
+        p_pin:   pin,
+      });
+      if (error || !data?.success) return false;
+      setIsPlatformAdmin(true);
+      setPlatformName((data.name as string) ?? email.trim());
+      return true;
     } catch {
       return false;
     }
@@ -40,16 +27,5 @@ export function usePlatformAuth() {
     setPlatformName(null);
   }, []);
 
-  /** Replace stored credentials (e.g. after first-time setup) */
-  const setupPlatformAdmin = useCallback((username: string, pin: string): void => {
-    localStorage.setItem(STORAGE_KEY, encode(username, pin));
-  }, []);
-
-  return {
-    isPlatformAdmin,
-    platformName,
-    loginPlatformAdmin,
-    logoutPlatformAdmin,
-    setupPlatformAdmin,
-  };
+  return { isPlatformAdmin, platformName, loginPlatformAdmin, logoutPlatformAdmin };
 }

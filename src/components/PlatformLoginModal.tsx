@@ -10,7 +10,7 @@ const P_PILL  = 'oklch(0.48 0.20 280)';
 const P_DIM   = 'oklch(0.55 0.06 258)';
 
 interface Props {
-  onLogin:  (username: string, pin: string) => boolean;
+  onLogin:  (username: string, pin: string) => Promise<boolean>;
   onClose:  () => void;
 }
 
@@ -19,28 +19,34 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
   const [digits,   setDigits]   = useState<string[]>([]);
   const [shake,    setShake]    = useState(false);
   const [success,  setSuccess]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
   const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { usernameRef.current?.focus(); }, []);
 
-  const submit = useCallback((u: string, pin: string) => {
-    const ok = onLogin(u, pin);
-    if (ok) {
-      setSuccess(true);
-      setTimeout(onClose, 420);
-    } else {
-      setShake(true);
-      setError('Credenciais incorrectas');
-      setTimeout(() => { setShake(false); setDigits([]); setError(''); }, 750);
+  const submit = useCallback(async (u: string, pin: string) => {
+    setLoading(true);
+    try {
+      const ok = await onLogin(u, pin);
+      if (ok) {
+        setSuccess(true);
+        setTimeout(onClose, 420);
+      } else {
+        setShake(true);
+        setError('Credenciais incorrectas');
+        setTimeout(() => { setShake(false); setDigits([]); setError(''); }, 750);
+      }
+    } finally {
+      setLoading(false);
     }
   }, [onLogin, onClose]);
 
   useEffect(() => {
-    if (digits.length === PIN_LENGTH && !shake && !success && username.trim()) {
+    if (digits.length === PIN_LENGTH && !shake && !success && !loading && username.trim()) {
       submit(username.trim(), digits.join(''));
     }
-  }, [digits, shake, success, username, submit]);
+  }, [digits, shake, success, loading, username, submit]);
 
   // Keyboard: only capture digit/backspace when username field is NOT focused
   useEffect(() => {
