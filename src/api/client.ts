@@ -180,7 +180,9 @@ export async function processReturn(ret: Return): Promise<{ returnId: string; nu
     })),
   });
   if (error) { console.error('processReturn:', error); return null; }
-  return data as any;
+  const d = data as any;
+  if (!d?.success) return null;
+  return { returnId: d.return_id as string, number: d.number as number };
 }
 
 export async function fetchReturns(): Promise<Return[]> {

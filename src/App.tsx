@@ -217,6 +217,7 @@ export default function App() {
         .catch(console.error)
         .finally(() => setProductsLoading(false));
       api.fetchSales().then(ss => setSales(ss)).catch(console.error);
+      // Peek next sale number (no longer increments the DB counter)
       api.nextSaleNumber().then(n => setSaleNo(n)).catch(console.error);
     });
   }, [config?.storeId]);
@@ -319,12 +320,23 @@ export default function App() {
     sale.items.forEach(item => {
       setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: Math.max(0, p.stock - item.quantity) } : p));
     });
-    if (backendOnline) api.recordSale(sale).catch(console.error);
-    else { api.recordSaleOffline(sale); setPendingOps(queueSize()); }
-    // Pre-fetch next sale number
-    if (backendOnline) api.nextSaleNumber().then(n => setSaleNo(n)).catch(console.error);
-    else setSaleNo(n => n + 1);
-  }, [backendOnline]);
+    if (backendOnline) {
+      api.recordSale(sale).then(() => {
+        // Fetch next number after successful save
+        api.nextSaleNumber().then(n => setSaleNo(n)).catch(console.error);
+      }).catch(e => {
+        console.error('recordSale failed, queuing offline:', e);
+        notify('Venda guardada localmente — sem ligação ao servidor.');
+        api.recordSaleOffline(sale);
+        setPendingOps(queueSize());
+        setSaleNo(n => n + 1);
+      });
+    } else {
+      api.recordSaleOffline(sale);
+      setPendingOps(queueSize());
+      setSaleNo(n => n + 1);
+    }
+  }, [backendOnline, notify]);
 
   // ── Returns ────────────────────────────────────────────────────
   const handleProcessReturn = useCallback(async (ret: Return) => {
@@ -479,7 +491,7 @@ export default function App() {
               <ErrorBoundary>
               {activeModule === 'pos' && (
                 <POSModule products={products}
-                  sales={sales} onSaleComplete={recordSale}
+                  sales={sales} saleNo={saleNo} onSaleComplete={recordSale}
                   onNotify={notify} onAddProduct={saveProduct}
                   currentUserId={auth.currentUser.id} currentUserName={auth.currentUser.name}
                   storeName={config.storeName}

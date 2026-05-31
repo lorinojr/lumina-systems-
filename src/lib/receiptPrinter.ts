@@ -58,8 +58,6 @@ td{padding:2px 0;vertical-align:top}
 <tbody>${rows}</tbody></table>
 <div class="d"></div>
 <table>
-<tr><td>Subtotal</td><td class="r">${fmt(sale.subtotal)} MT</td></tr>
-<tr><td>IVA (16%)</td><td class="r">${fmt(sale.tax)} MT</td></tr>
 <tr class="tot"><td>TOTAL</td><td class="r">${fmt(sale.total)} MT</td></tr>
 </table>
 <div class="d"></div>

@@ -224,11 +224,11 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
   // ── CSV export ──────────────────────────────────────────────
   const handleExportCSV = useCallback(() => {
     if (drill.level === 'hours' && filteredSales.length > 0) {
-      const header = ['Venda #', 'Hora', 'Artigos', 'Subtotal', 'IVA', 'Total', 'Método', 'Operador'];
+      const header = ['Venda #', 'Hora', 'Artigos', 'Total', 'Método', 'Operador'];
       const rows = filteredSales.map(s => [
         String(s.number), fmtTime(s.timestamp),
         String(s.items.reduce((a, i) => a + i.quantity, 0)),
-        s.subtotal.toFixed(2), s.tax.toFixed(2), s.total.toFixed(2),
+        s.total.toFixed(2),
         s.paymentMethod === 'mpesa' ? 'M-Pesa' : 'Dinheiro',
         s.cashierName ?? '',
       ]);

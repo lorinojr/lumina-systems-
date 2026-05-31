@@ -17,8 +17,6 @@ import { printReceipt } from '../lib/receiptPrinter';
 
 const cn = (...a: Parameters<typeof clsx>) => twMerge(clsx(a));
 
-const TAX_RATE = 0.16;
-
 // ─── Modal wrapper — NO backdrop-blur, fast tween ────────────────────────────
 function ModalShell({
   onClose, children, maxW = 'max-w-md',
@@ -413,16 +411,8 @@ function ReceiptModal({ sale, change, storeName, onClose }: { sale: Sale; change
       </div>
 
       {/* Totals block */}
-      <div className="mx-4 my-3 rounded-xl bg-surface border border-black/[0.07] overflow-hidden">
-        <div className="px-4 py-2.5 flex justify-between items-center text-[11px] border-b border-black/[0.05]">
-          <span className="text-muted">Subtotal</span>
-          <span className="font-semibold text-ink tabular-nums">{sale.subtotal.toFixed(2)} MT</span>
-        </div>
-        <div className="px-4 py-2.5 flex justify-between items-center text-[11px] border-b border-black/[0.05]">
-          <span className="text-muted">IVA (16%)</span>
-          <span className="font-semibold text-ink tabular-nums">{sale.tax.toFixed(2)} MT</span>
-        </div>
-        <div className="px-4 py-3 flex justify-between items-center bg-ink text-white">
+      <div className="mx-4 my-3 rounded-xl bg-ink overflow-hidden">
+        <div className="px-4 py-3 flex justify-between items-center text-white">
           <span className="text-[12px] font-black uppercase tracking-wider">Total</span>
           <span className="text-[24px] font-black tabular-nums leading-none">{sale.total.toFixed(2)} MT</span>
         </div>
@@ -514,6 +504,7 @@ function CartRow({ item, index, flash, onQtyChange, onRemove }: CartRowProps) {
 export interface POSModuleProps {
   products:       Product[];
   sales:          Sale[];
+  saleNo?:        number;
   onNotify:       (msg: string) => void;
   onAddProduct:   (p: Product) => void;
   onSaleComplete: (s: Sale) => void;
@@ -525,7 +516,7 @@ export interface POSModuleProps {
   t:              any;
 }
 
-export function POSModule({ products, sales, onNotify, onAddProduct, onSaleComplete, currentUserId, currentUserName, storeName, onOpenReturns, onOpenReconciliation }: POSModuleProps) {
+export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAddProduct, onSaleComplete, currentUserId, currentUserName, storeName, onOpenReturns, onOpenReconciliation }: POSModuleProps) {
   const [cart,          setCart]          = useState<CartItem[]>([]);
   const [query,         setQuery]         = useState('');
   const [suggestions,   setSuggestions]   = useState<Product[]>([]);
@@ -533,7 +524,12 @@ export function POSModule({ products, sales, onNotify, onAddProduct, onSaleCompl
   const [notFound,      setNotFound]      = useState<string | null>(null);
   const [cashOpen,      setCashOpen]      = useState(false);
   const [mpesaOpen,     setMpesaOpen]     = useState(false);
-  const [saleNo,        setSaleNo]        = useState(1);
+  const [saleNo,        setSaleNo]        = useState(saleNoProp ?? 1);
+
+  // Sync when the parent (App.tsx) updates the next sale number from the backend
+  useEffect(() => {
+    if (saleNoProp && saleNoProp > saleNo) setSaleNo(saleNoProp);
+  }, [saleNoProp]);
   const [completedSale, setCompletedSale] = useState<{ sale: Sale; change: number } | null>(null);
   const [paymentFlash,  setPaymentFlash]  = useState<{ method: 'cash' | 'mpesa'; total: number } | null>(null);
   const [shiftOpen,     setShiftOpen]     = useState(false);
@@ -636,8 +632,8 @@ export function POSModule({ products, sales, onNotify, onAddProduct, onSaleCompl
   }, [focusBarcode]);
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.subtotal, 0), [cart]);
-  const tax      = useMemo(() => subtotal * TAX_RATE, [subtotal]);
-  const total    = useMemo(() => subtotal + tax, [subtotal, tax]);
+  const tax      = 0;
+  const total    = subtotal;
 
   const completeSale = useCallback((method: 'cash' | 'mpesa', receivedAmount?: number) => {
     const sale: Sale = {
@@ -657,7 +653,7 @@ export function POSModule({ products, sales, onNotify, onAddProduct, onSaleCompl
     setPaymentFlash({ method, total });
     setCompletedSale({ sale, change });
     setTimeout(() => setPaymentFlash(null), 1000);
-  }, [cart, subtotal, tax, total, saleNo, onSaleComplete, currentUserId, currentUserName]);
+  }, [cart, subtotal, total, saleNo, onSaleComplete, currentUserId, currentUserName]);
 
   return (
     <div className="flex h-full overflow-hidden bg-canvas">
@@ -878,14 +874,10 @@ export function POSModule({ products, sales, onNotify, onAddProduct, onSaleCompl
           </div>
 
           {/* Secondary breakdown */}
-          <div className="mt-4 w-full border-t border-black/[0.05] pt-3 space-y-1.5">
+          <div className="mt-4 w-full border-t border-black/[0.05] pt-3">
             <div className="flex justify-between text-[11px]">
-              <span className="text-muted">Subtotal</span>
-              <span className="font-semibold text-ink tabular-nums">{subtotal.toFixed(2)} MT</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-muted">IVA (16%)</span>
-              <span className="font-semibold text-ink tabular-nums">{tax.toFixed(2)} MT</span>
+              <span className="text-muted">Artigos no carrinho</span>
+              <span className="font-semibold text-ink tabular-nums">{cart.reduce((s, i) => s + i.quantity, 0)}</span>
             </div>
           </div>
         </div>
