@@ -15,6 +15,7 @@ dist-ssr/
 .claude/
 .agents/
 skills-lock.json
+graphify-out/
 
 # OS / editor
 .DS_Store

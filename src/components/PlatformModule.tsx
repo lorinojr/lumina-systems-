@@ -135,7 +135,8 @@ function MiniPinPad({ onComplete, onCancel, cancelLabel = 'Cancelar' }: {
 // ─── Create Store Modal ───────────────────────────────────────────────────────
 type CreateStep = 'info' | 'pin1' | 'pin2' | 'saving';
 
-function CreateStoreModal({ onClose, onCreated }: {
+function CreateStoreModal({ token, onClose, onCreated }: {
+  token:     string;
   onClose:   () => void;
   onCreated: () => void;
 }) {
@@ -177,13 +178,18 @@ function CreateStoreModal({ onClose, onCreated }: {
     setSaveError('');
     try {
       const { data, error } = await supabase.rpc('register_store', {
+        p_token:       token,
         p_store_name:  name.trim(),
         p_owner_phone: phone.trim(),
         p_admin_name:  'Admin',
         p_admin_pin:   pin,
       });
       if (error) throw error;
-      if (!data?.store_id) throw new Error('Resposta inválida do servidor');
+      if (!data?.success) {
+        throw new Error(data?.error === 'unauthorized'
+          ? 'Sessão expirada. Inicie sessão novamente.'
+          : 'Resposta inválida do servidor');
+      }
       onCreated();
     } catch (e: any) {
       setSaveError(e.message ?? 'Erro ao criar a loja. Verifique a ligação.');
@@ -541,10 +547,11 @@ function StoreCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 interface Props {
   adminName: string;
+  token:     string;
   onLogout:  () => void;
 }
 
-export function PlatformModule({ adminName, onLogout }: Props) {
+export function PlatformModule({ adminName, token, onLogout }: Props) {
   const [stores,     setStores]     = useState<StoreRow[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
@@ -555,15 +562,19 @@ export function PlatformModule({ adminName, onLogout }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: rpcErr } = await supabase.rpc('list_all_stores');
+      const { data, error: rpcErr } = await supabase.rpc('list_all_stores', { p_token: token });
       if (rpcErr) throw rpcErr;
-      setStores((data as StoreRow[]) ?? []);
+      if (!data?.success) {
+        if (data?.error === 'unauthorized') { onLogout(); return; }
+        throw new Error('Erro ao carregar lojas');
+      }
+      setStores((data.stores as StoreRow[]) ?? []);
     } catch (e: any) {
       setError(e.message ?? 'Erro ao carregar lojas');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token, onLogout]);
 
   useEffect(() => { loadStores(); }, [loadStores]);
 
@@ -571,11 +582,16 @@ export function PlatformModule({ adminName, onLogout }: Props) {
     if (busyId) return;
     setBusyId(store.store_id);
     try {
-      const { error: rpcErr } = await supabase.rpc('set_store_status', {
+      const { data, error: rpcErr } = await supabase.rpc('set_store_status', {
+        p_token:    token,
         p_store_id: store.store_id,
         p_status:   newStatus,
       });
       if (rpcErr) throw rpcErr;
+      if (!data?.success) {
+        if (data?.error === 'unauthorized') { onLogout(); return; }
+        throw new Error('Erro ao alterar estado');
+      }
       setStores(prev => prev.map(s =>
         s.store_id === store.store_id ? { ...s, status: newStatus } : s,
       ));
@@ -595,11 +611,16 @@ export function PlatformModule({ adminName, onLogout }: Props) {
   const cancelStore = (store: StoreRow) => setStatus(store, 'cancelled');
 
   const resetAdminPin = async (store: StoreRow, newPin: string) => {
-    const { error: rpcErr } = await supabase.rpc('reset_admin_pin', {
+    const { data, error: rpcErr } = await supabase.rpc('reset_admin_pin', {
+      p_token:    token,
       p_store_id: store.store_id,
       p_new_pin:  newPin,
     });
     if (rpcErr) throw rpcErr;
+    if (!data?.success) {
+      if (data?.error === 'unauthorized') { onLogout(); return; }
+      throw new Error(data?.error === 'no_admin' ? 'Loja sem administrador' : 'Erro ao repor senha');
+    }
   };
 
   const deleteStore = async (store: StoreRow) => {
@@ -607,10 +628,15 @@ export function PlatformModule({ adminName, onLogout }: Props) {
     setBusyId(store.store_id);
     try {
       const { data, error: rpcErr } = await supabase.rpc('delete_store', {
+        p_token:    token,
         p_store_id: store.store_id,
       });
       if (rpcErr) throw rpcErr;
       const result = data as any;
+      if (!result?.success) {
+        if (result?.error === 'unauthorized') { onLogout(); return; }
+        throw new Error('Erro ao eliminar loja');
+      }
       if (result?.action === 'deleted') {
         // Hard-deleted — remove from list
         setStores(prev => prev.filter(s => s.store_id !== store.store_id));
@@ -771,6 +797,7 @@ export function PlatformModule({ adminName, onLogout }: Props) {
       <AnimatePresence>
         {showCreate && (
           <CreateStoreModal
+            token={token}
             onClose={() => setShowCreate(false)}
             onCreated={() => { setShowCreate(false); loadStores(); }}
           />

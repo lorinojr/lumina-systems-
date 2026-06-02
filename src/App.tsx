@@ -10,7 +10,6 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import type { Product, Sale, ActiveModule, Return, CashReconciliation } from './types';
-import { MOCK_PRODUCTS } from './data/mockData';
 import * as api from './api/client';
 import { supabase } from './lib/supabase';
 import { replayAll, queueSize } from './lib/offlineQueue';
@@ -250,7 +249,7 @@ export default function App() {
   }, []);
 
   // ── Kill switch ────────────────────────────────────────────────
-  const killSwitch = useKillSwitch(config?.storeId ?? null, config?.ownerPhone ?? '841234567');
+  const killSwitch = useKillSwitch(config?.storeId ?? null, config?.ownerPhone ?? '');
 
   // ── Keyboard ───────────────────────────────────────────────────
   useEffect(() => {
@@ -407,6 +406,7 @@ export default function App() {
         <Suspense fallback={null}>
           <PlatformModule
             adminName={platformAuth.platformName ?? 'Operador'}
+            token={platformAuth.token ?? ''}
             onLogout={handlePlatformLogout}
           />
         </Suspense>
@@ -527,6 +527,7 @@ export default function App() {
                 <ErrorBoundary fallbackLabel="Erro na Plataforma">
                   <PlatformModule
                     adminName={platformAuth.platformName ?? 'Operador'}
+                    token={platformAuth.token ?? ''}
                     onLogout={handlePlatformLogout}
                   />
                 </ErrorBoundary>

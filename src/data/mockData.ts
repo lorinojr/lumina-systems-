@@ -1,6 +1,6 @@
 import type { Product } from '../types';
 
-// ─── Shared constants ─────────────────────────────────────────────────────────
+// ─── Product catalog metadata (categories/units used by Inventory + POS) ──────
 export const PRODUCT_CATEGORIES = [
   'Analgésicos',
   'Antibióticos',
@@ -19,9 +19,6 @@ export const PRODUCT_CATEGORIES = [
 ] as const;
 
 export const PRODUCT_UNITS = ['Un', 'Cx', 'Fr', 'Tb', 'Kg', 'Lt', 'Dose', 'Par', 'M'] as const;
-
-// ─── Products start empty — add real products via the Inventory page ──────────
-export const MOCK_PRODUCTS: Product[] = [];
 
 export function buildBarcodeMap(products: Product[]): Map<string, Product> {
   const m = new Map<string, Product>();
