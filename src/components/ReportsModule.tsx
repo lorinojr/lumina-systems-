@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   CaretRight, DownloadSimple, CalendarBlank,
-  CurrencyCircleDollar, Receipt, Clock, ArrowLeft,
+  Clock, ArrowLeft,
 } from '@phosphor-icons/react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -19,6 +19,7 @@ function fmtTime(d: Date) {
 }
 
 const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MONTH_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const DOW_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 type DrillLevel = 'years' | 'months' | 'weeks' | 'days' | 'hours';
@@ -30,15 +31,24 @@ interface DrillState {
   day?: Date;
 }
 
+type PresetKey = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'thisYear' | 'all';
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: 'today',     label: 'Hoje' },
+  { key: 'yesterday', label: 'Ontem' },
+  { key: 'thisWeek',  label: 'Esta Semana' },
+  { key: 'thisMonth', label: 'Este Mês' },
+  { key: 'thisYear',  label: 'Este Ano' },
+  { key: 'all',       label: 'Tudo' },
+];
+
 interface ReportsModuleProps {
   products: Product[];
   sales:    Sale[];
   onNotify: (msg: string) => void;
 }
 
-function getWeekNumber(d: Date): number {
-  const oneJan = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil(((d.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7);
+function startOfDay(d: Date): Date {
+  const r = new Date(d); r.setHours(0, 0, 0, 0); return r;
 }
 
 function startOfWeek(d: Date): Date {
@@ -55,6 +65,48 @@ function endOfWeek(d: Date): Date {
   return r;
 }
 
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear()
+      && a.getMonth()    === b.getMonth()
+      && a.getDate()     === b.getDate();
+}
+
+function presetToDrill(key: PresetKey, today: Date): DrillState {
+  switch (key) {
+    case 'today': {
+      const d = startOfDay(today);
+      return { level: 'hours', day: d, year: d.getFullYear(), month: d.getMonth(), weekStart: startOfWeek(d) };
+    }
+    case 'yesterday': {
+      const d = startOfDay(today); d.setDate(d.getDate() - 1);
+      return { level: 'hours', day: d, year: d.getFullYear(), month: d.getMonth(), weekStart: startOfWeek(d) };
+    }
+    case 'thisWeek': {
+      const ws = startOfWeek(today);
+      return { level: 'days', weekStart: ws, year: ws.getFullYear(), month: ws.getMonth() };
+    }
+    case 'thisMonth':
+      return { level: 'weeks', year: today.getFullYear(), month: today.getMonth() };
+    case 'thisYear':
+      return { level: 'months', year: today.getFullYear() };
+    case 'all':
+      return { level: 'years' };
+  }
+}
+
+function matchPreset(drill: DrillState, today: Date): PresetKey | null {
+  if (drill.level === 'years' && drill.year === undefined) return 'all';
+  if (drill.level === 'months' && drill.year === today.getFullYear() && drill.month === undefined) return 'thisYear';
+  if (drill.level === 'weeks' && drill.year === today.getFullYear() && drill.month === today.getMonth()) return 'thisMonth';
+  if (drill.level === 'days' && drill.weekStart && sameDay(drill.weekStart, startOfWeek(today))) return 'thisWeek';
+  if (drill.level === 'hours' && drill.day) {
+    if (sameDay(drill.day, today)) return 'today';
+    const y = new Date(today); y.setDate(y.getDate() - 1);
+    if (sameDay(drill.day, y)) return 'yesterday';
+  }
+  return null;
+}
+
 function exportCSV(rows: string[][], filename: string) {
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -67,7 +119,12 @@ function exportCSV(rows: string[][], filename: string) {
 }
 
 export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps) {
-  const [drill, setDrill] = useState<DrillState>({ level: 'years' });
+  // Stable "today" for the lifetime of this mount — keeps preset matching stable
+  // and avoids re-deriving every render.
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [drill, setDrill] = useState<DrillState>(() => presetToDrill('today', today));
+  const activePreset = matchPreset(drill, today);
+  const applyPreset = useCallback((key: PresetKey) => setDrill(presetToDrill(key, today)), [today]);
 
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
@@ -89,8 +146,9 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
   const totalRevenue = filteredSales.reduce((s, x) => s + x.total, 0);
   const totalTx = filteredSales.length;
   const avgTicket = totalTx ? totalRevenue / totalTx : 0;
-  const cashTotal = filteredSales.filter(s => s.paymentMethod === 'cash').reduce((s, x) => s + x.total, 0);
+  const cashTotal  = filteredSales.filter(s => s.paymentMethod === 'cash').reduce((s, x) => s + x.total, 0);
   const mpesaTotal = filteredSales.filter(s => s.paymentMethod === 'mpesa').reduce((s, x) => s + x.total, 0);
+  const emolaTotal = filteredSales.filter(s => s.paymentMethod === 'emola').reduce((s, x) => s + x.total, 0);
 
   // ── Group data for current drill level ──────────────────────
   const groups = useMemo(() => {
@@ -141,9 +199,13 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
         .map(({ start, sales: ss }) => {
           const end = new Date(start);
           end.setDate(end.getDate() + 6);
+          const sameMonth = start.getMonth() === end.getMonth();
+          const label = sameMonth
+            ? `${start.getDate()}–${end.getDate()} ${MONTH_SHORT[start.getMonth()]}`
+            : `${start.getDate()} ${MONTH_SHORT[start.getMonth()]} – ${end.getDate()} ${MONTH_SHORT[end.getMonth()]}`;
           return {
             key: start.toISOString(),
-            label: `Semana ${getWeekNumber(start)} (${start.getDate()}/${start.getMonth() + 1} – ${end.getDate()}/${end.getMonth() + 1})`,
+            label: `Semana de ${label}`,
             revenue: ss.reduce((s, x) => s + x.total, 0),
             txCount: ss.length,
             onClick: () => setDrill({ level: 'days', year: drill.year, month: drill.month, weekStart: start }),
@@ -162,13 +224,20 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
       });
       return Array.from(byDay.values())
         .sort((a, b) => b.date.getTime() - a.date.getTime())
-        .map(({ date, sales: ss }) => ({
-          key: date.toISOString(),
-          label: `${DOW_SHORT[date.getDay()]} ${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`,
-          revenue: ss.reduce((s, x) => s + x.total, 0),
-          txCount: ss.length,
-          onClick: () => setDrill({ ...drill, level: 'hours', day: date }),
-        }));
+        .map(({ date, sales: ss }) => {
+          const isToday = sameDay(date, today);
+          const y = new Date(today); y.setDate(y.getDate() - 1);
+          const isYesterday = sameDay(date, y);
+          const dateLabel = `${DOW_SHORT[date.getDay()]} ${date.getDate()} ${MONTH_SHORT[date.getMonth()]}`;
+          const label = isToday ? `Hoje · ${dateLabel}` : isYesterday ? `Ontem · ${dateLabel}` : dateLabel;
+          return {
+            key: date.toISOString(),
+            label,
+            revenue: ss.reduce((s, x) => s + x.total, 0),
+            txCount: ss.length,
+            onClick: () => setDrill({ ...drill, level: 'hours', day: date }),
+          };
+        });
     }
 
     if (drill.level === 'hours' && drill.day) {
@@ -195,7 +264,7 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
   // ── Breadcrumb ──────────────────────────────────────────────
   const breadcrumbs = useMemo(() => {
     const crumbs: { label: string; onClick?: () => void }[] = [];
-    crumbs.push({ label: 'Todos os Anos', onClick: () => setDrill({ level: 'years' }) });
+    crumbs.push({ label: 'Tudo', onClick: () => setDrill({ level: 'years' }) });
     if (drill.year !== undefined) {
       crumbs.push({ label: String(drill.year), onClick: () => setDrill({ level: 'months', year: drill.year }) });
     }
@@ -203,16 +272,28 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
       crumbs.push({ label: MONTH_NAMES[drill.month], onClick: () => setDrill({ level: 'weeks', year: drill.year, month: drill.month }) });
     }
     if (drill.weekStart) {
+      const ws = drill.weekStart;
+      const we = new Date(ws); we.setDate(we.getDate() + 6);
+      const sameMonth = ws.getMonth() === we.getMonth();
+      const wLabel = sameMonth
+        ? `${ws.getDate()}–${we.getDate()} ${MONTH_SHORT[ws.getMonth()]}`
+        : `${ws.getDate()} ${MONTH_SHORT[ws.getMonth()]} – ${we.getDate()} ${MONTH_SHORT[we.getMonth()]}`;
       crumbs.push({
-        label: `Semana ${getWeekNumber(drill.weekStart)}`,
+        label: wLabel,
         onClick: () => setDrill({ level: 'days', year: drill.year, month: drill.month, weekStart: drill.weekStart }),
       });
     }
     if (drill.day) {
-      crumbs.push({ label: `${drill.day.getDate()}/${drill.day.getMonth() + 1}` });
+      const isToday = sameDay(drill.day, today);
+      const y = new Date(today); y.setDate(y.getDate() - 1);
+      const isYesterday = sameDay(drill.day, y);
+      crumbs.push({
+        label: isToday ? 'Hoje' : isYesterday ? 'Ontem'
+          : `${DOW_SHORT[drill.day.getDay()]} ${drill.day.getDate()} ${MONTH_SHORT[drill.day.getMonth()]}`,
+      });
     }
     return crumbs;
-  }, [drill]);
+  }, [drill, today]);
 
   const goBack = useCallback(() => {
     if (drill.level === 'hours') setDrill({ level: 'days', year: drill.year, month: drill.month, weekStart: drill.weekStart });
@@ -229,7 +310,7 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
         String(s.number), fmtTime(s.timestamp),
         String(s.items.reduce((a, i) => a + i.quantity, 0)),
         s.total.toFixed(2),
-        s.paymentMethod === 'mpesa' ? 'M-Pesa' : 'Dinheiro',
+        s.paymentMethod === 'mpesa' ? 'M-Pesa' : s.paymentMethod === 'emola' ? 'Emola' : 'Dinheiro',
         s.cashierName ?? '',
       ]);
       exportCSV([header, ...rows], `vendas_${drill.day?.toISOString().slice(0, 10)}.csv`);
@@ -249,11 +330,12 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden bg-canvas">
       {/* Header */}
-      <div className="px-6 py-3 bg-white border-b border-black/[0.06] flex items-center justify-between shrink-0">
+      <div className="px-6 py-3 bg-canvas border-b border-black/[0.06] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           {drill.level !== 'years' && (
-            <button onClick={goBack} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors">
-              <ArrowLeft size={14} weight="bold" className="text-muted" />
+            <button onClick={goBack} aria-label="Voltar"
+              className="w-11 h-11 -ml-2 rounded-lg flex items-center justify-center hover:bg-black/5 active:bg-black/10 transition-colors">
+              <ArrowLeft size={18} weight="bold" className="text-muted" />
             </button>
           )}
           <div>
@@ -271,30 +353,72 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
           </div>
         </div>
         <button onClick={handleExportCSV}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">
-          <DownloadSimple size={13} weight="bold" />Exportar CSV
+          className="flex items-center gap-1.5 h-10 px-4 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">
+          <DownloadSimple size={14} weight="bold" />Exportar CSV
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="px-6 py-3 bg-white border-b border-black/[0.06] shrink-0">
-        <div className="grid grid-cols-4 gap-4">
-          {[
-            { icon: CurrencyCircleDollar, label: 'Receita Total', value: fmtMt(totalRevenue), color: 'text-accent', bg: 'bg-accent/8' },
-            { icon: Receipt, label: 'Transacções', value: String(totalTx), color: 'text-success', bg: 'bg-success/8' },
-            { icon: CurrencyCircleDollar, label: 'Dinheiro', value: fmtMt(cashTotal), color: 'text-ink', bg: 'bg-black/[0.04]' },
-            { icon: CurrencyCircleDollar, label: 'M-Pesa', value: fmtMt(mpesaTotal), color: 'text-accent', bg: 'bg-accent/8' },
-          ].map(s => (
-            <div key={s.label} className="flex items-center gap-3">
-              <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', s.bg)}>
-                <s.icon size={15} weight="bold" className={s.color} />
-              </div>
-              <div>
-                <div className="text-[9px] font-black text-muted uppercase tracking-wider">{s.label}</div>
-                <div className="text-[15px] font-black text-ink leading-tight">{s.value}</div>
-              </div>
+      {/* Preset chips — the everyday timeframes. Breadcrumb above stays for power use. */}
+      <div className="px-6 py-3 bg-canvas border-b border-black/[0.06] shrink-0 flex items-center gap-2 flex-wrap">
+        {PRESETS.map(p => {
+          const active = activePreset === p.key;
+          return (
+            <button
+              key={p.key}
+              onClick={() => applyPreset(p.key)}
+              aria-pressed={active}
+              className={cn(
+                'h-9 px-3.5 rounded-full text-[12px] font-bold transition-colors',
+                active
+                  ? 'bg-accent text-white shadow-sm shadow-accent/20'
+                  : 'bg-surface text-muted hover:text-ink hover:bg-black/[0.05]',
+              )}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stats — numbers-first, no decorative icons. Receita gets primary weight. */}
+      <div className="px-6 py-4 bg-canvas border-b border-black/[0.06] shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-4 items-end">
+          {/* Primary: Receita Total spans visually larger */}
+          <div className="col-span-1">
+            <div className="text-[9px] font-black text-muted uppercase tracking-[0.14em] mb-1">Receita Total</div>
+            <div className="text-[28px] font-black text-ink leading-none num">
+              {totalRevenue.toLocaleString('pt-MZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <span className="text-[14px] ml-1 text-muted font-bold">MT</span>
             </div>
-          ))}
+          </div>
+          <div>
+            <div className="text-[9px] font-black text-muted uppercase tracking-[0.14em] mb-1">Transacções</div>
+            <div className="text-[22px] font-black text-ink leading-none num">{totalTx}</div>
+            {totalTx > 0 && (
+              <div className="text-[10px] text-muted font-semibold mt-1 num">média {avgTicket.toFixed(0)} MT</div>
+            )}
+          </div>
+          <div>
+            <div className="text-[9px] font-black text-muted uppercase tracking-[0.14em] mb-1">Dinheiro</div>
+            <div className="text-[22px] font-black text-ink leading-none num">
+              {cashTotal.toLocaleString('pt-MZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <span className="text-[12px] ml-1 text-muted font-bold">MT</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] font-black text-mpesa uppercase tracking-[0.14em] mb-1">M-Pesa</div>
+            <div className="text-[22px] font-black text-mpesa leading-none num">
+              {mpesaTotal.toLocaleString('pt-MZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <span className="text-[12px] ml-1 text-mpesa/70 font-bold">MT</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] font-black text-emola uppercase tracking-[0.14em] mb-1">Emola</div>
+            <div className="text-[22px] font-black text-emola leading-none num">
+              {emolaTotal.toLocaleString('pt-MZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <span className="text-[12px] ml-1 text-emola/70 font-bold">MT</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -309,15 +433,15 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
           /* At hours level, show individual transactions */
           <div className="space-y-2">
             {groups.map(g => (
-              <div key={g.key} className="bg-white rounded-xl border border-black/[0.06] overflow-hidden">
+              <div key={g.key} className="bg-canvas rounded-xl border border-black/[0.06] overflow-hidden">
                 <div className="px-4 py-3 flex items-center justify-between border-b border-black/[0.04]">
                   <div className="flex items-center gap-2">
                     <Clock size={14} weight="bold" className="text-accent" />
-                    <span className="text-[13px] font-black text-ink">{g.label}</span>
+                    <span className="text-[13px] font-black text-ink num">{g.label}</span>
                   </div>
                   <div className="flex items-center gap-4 text-[11px]">
-                    <span className="text-muted">{g.txCount} venda{g.txCount !== 1 ? 's' : ''}</span>
-                    <span className="font-black text-accent">{fmtMt(g.revenue)}</span>
+                    <span className="text-muted num">{g.txCount} venda{g.txCount !== 1 ? 's' : ''}</span>
+                    <span className="font-black text-accent num">{fmtMt(g.revenue)}</span>
                   </div>
                 </div>
                 <table className="w-full text-left">
@@ -326,14 +450,17 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
                       .filter(s => s.timestamp.getHours() === parseInt(g.key))
                       .map(sale => (
                         <tr key={sale.id} className="hover:bg-surface/50">
-                          <td className="py-2 px-4 font-mono text-[12px] font-bold text-ink">#{String(sale.number).padStart(4, '0')}</td>
-                          <td className="py-2 px-4 font-mono text-[11px] text-muted">{fmtTime(sale.timestamp)}</td>
-                          <td className="py-2 px-4 text-[11px] text-muted">{sale.items.reduce((s, i) => s + i.quantity, 0)} art.</td>
-                          <td className="py-2 px-4 text-right text-[13px] font-black text-ink">{fmtMt(sale.total)}</td>
+                          <td className="py-2 px-4 font-mono text-[12px] font-bold text-ink num">#{String(sale.number).padStart(4, '0')}</td>
+                          <td className="py-2 px-4 font-mono text-[11px] text-muted num">{fmtTime(sale.timestamp)}</td>
+                          <td className="py-2 px-4 text-[11px] text-muted num">{sale.items.reduce((s, i) => s + i.quantity, 0)} art.</td>
+                          <td className="py-2 px-4 text-right text-[13px] font-black text-ink num">{fmtMt(sale.total)}</td>
                           <td className="py-2 px-4 text-center">
                             <span className={cn('text-[10px] font-black px-2 py-0.5 rounded uppercase',
-                              sale.paymentMethod === 'mpesa' ? 'bg-accent/10 text-accent' : 'bg-success/10 text-success')}>
-                              {sale.paymentMethod === 'mpesa' ? 'M-Pesa' : 'Cash'}
+                              sale.paymentMethod === 'mpesa' ? 'bg-mpesa/10 text-mpesa' :
+                              sale.paymentMethod === 'emola' ? 'bg-emola/12 text-emola' :
+                                                               'bg-success/10 text-success')}>
+                              {sale.paymentMethod === 'mpesa' ? 'M-Pesa' :
+                               sale.paymentMethod === 'emola' ? 'Emola' : 'Cash'}
                             </span>
                           </td>
                           <td className="py-2 px-4 text-[11px] text-muted">{sale.cashierName ?? '—'}</td>
@@ -350,22 +477,22 @@ export function ReportsModule({ products, sales, onNotify }: ReportsModuleProps)
             {groups.map(g => (
               <button key={g.key} onClick={g.onClick} disabled={!g.onClick}
                 className={cn(
-                  'w-full bg-white rounded-xl border border-black/[0.06] p-4 flex items-center gap-4 transition-all text-left',
+                  'w-full bg-canvas rounded-xl border border-black/[0.06] p-4 flex items-center gap-4 transition-all text-left min-h-[64px]',
                   g.onClick ? 'hover:border-accent/30 hover:shadow-sm cursor-pointer' : 'cursor-default',
                 )}>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14px] font-black text-ink">{g.label}</div>
-                  <div className="text-[11px] text-muted font-medium mt-0.5">
+                  <div className="text-[11px] text-muted font-medium mt-0.5 num">
                     {g.txCount} transacç{g.txCount !== 1 ? 'ões' : 'ão'}
                   </div>
                 </div>
-                <div className="w-48 shrink-0">
+                <div className="hidden sm:block w-32 lg:w-48 xl:w-64 shrink-0">
                   <div className="h-2 bg-black/[0.05] rounded-full overflow-hidden">
                     <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${(g.revenue / maxRev) * 100}%` }} />
                   </div>
                 </div>
-                <div className="text-right shrink-0 w-36">
-                  <div className="text-[15px] font-black text-ink tabular-nums">{fmtMt(g.revenue)}</div>
+                <div className="text-right shrink-0 w-28 lg:w-36">
+                  <div className="text-[17px] lg:text-[20px] font-black text-ink num">{fmtMt(g.revenue)}</div>
                 </div>
                 {g.onClick && <CaretRight size={14} weight="bold" className="text-muted shrink-0" />}
               </button>

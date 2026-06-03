@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Backspace, X, Buildings, CheckCircle } from '@phosphor-icons/react';
+import { Backspace, X, CheckCircle } from '@phosphor-icons/react';
+import { VelaLogo } from './VelaLogo';
 
 const PIN_LENGTH = 8;
 
@@ -84,7 +85,7 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.1 }}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60"
         onClick={onClose}
       />
 
@@ -93,7 +94,7 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
         transition={{ duration: 0.12, ease: [0.22, 1, 0.36, 1] }}
-        className="relative w-full max-w-[308px] bg-white rounded-2xl shadow-2xl border border-black/[0.07] overflow-hidden"
+        className="relative w-full max-w-[308px] bg-canvas rounded-2xl shadow-2xl border border-black/[0.07] overflow-hidden"
       >
         <button onClick={onClose}
           className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 text-white/60 hover:text-white transition-colors z-10">
@@ -102,13 +103,13 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
 
         {/* ── Dark header band ─────────────────────────────────── */}
         <div className="px-6 pt-6 pb-5 text-center" style={{ background: P_BG }}>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white"
             style={{ background: P_PILL }}>
             {success
-              ? <CheckCircle size={24} weight="fill" className="text-white" />
-              : <Buildings   size={22} weight="fill" className="text-white" />}
+              ? <CheckCircle size={24} weight="fill" />
+              : <VelaLogo size={24} title="Vela" />}
           </div>
-          <div className="text-[13px] font-black text-white tracking-widest uppercase">Lumina Systems</div>
+          <div className="text-[13px] font-black text-white tracking-widest uppercase">Vela Systems</div>
           <div className="text-[10.5px] font-medium mt-0.5" style={{ color: P_DIM }}>
             Acesso de Operador
           </div>
@@ -127,7 +128,7 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); /* shift focus to numpad */ }
               }}
-              placeholder="email@lumina.co.mz"
+              placeholder="email@vela.co.mz"
               autoComplete="email"
               spellCheck={false}
               className="field-input"
@@ -177,14 +178,15 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
                 <button key="back"
                   onClick={() => { if (!shake && !success) setDigits(d => d.slice(0, -1)); }}
                   disabled={digits.length === 0 || shake || success}
-                  className="h-[52px] rounded-xl bg-surface flex items-center justify-center hover:bg-black/[0.07] active:scale-95 transition-all disabled:opacity-25">
-                  <Backspace size={17} weight="bold" className="text-muted" />
+                  aria-label="Apagar"
+                  className="h-12 rounded-xl bg-surface border border-black/[0.05] flex items-center justify-center hover:bg-black/[0.07] active:bg-black/[0.1] transition-colors disabled:opacity-25">
+                  <Backspace size={18} weight="bold" className="text-muted" />
                 </button>
               );
               return (
                 <button key={k} onClick={() => pressDigit(k)}
                   disabled={shake || success}
-                  className="h-[52px] rounded-xl bg-surface text-[21px] font-black text-ink hover:bg-black/[0.07] active:scale-95 transition-all disabled:opacity-50 select-none">
+                  className="h-12 rounded-xl bg-surface border border-black/[0.05] text-[21px] font-black text-ink num hover:bg-black/[0.07] active:bg-black/[0.1] transition-colors disabled:opacity-50 select-none">
                   {k}
                 </button>
               );
@@ -193,7 +195,7 @@ export function PlatformLoginModal({ onLogin, onClose }: Props) {
 
           {/* Hint */}
           <p className="text-[10px] text-muted/60 font-medium text-center mt-3.5">
-            Credenciais de operador Lumina
+            Credenciais de operador Vela
           </p>
         </div>
       </motion.div>

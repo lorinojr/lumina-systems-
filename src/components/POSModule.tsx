@@ -6,7 +6,7 @@ import React, {
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Barcode, Trash, Plus, Minus, X,
-  CurrencyCircleDollar, ArrowCounterClockwise, Warning, CheckCircle, ChartLineUp,
+  CurrencyCircleDollar, ArrowCounterClockwise, Warning, CheckCircle, ChartLineUp, CaretDown,
 } from '@phosphor-icons/react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -68,7 +68,7 @@ function CashModal({
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between bg-surface rounded-lg px-4 py-3">
           <span className="text-[11px] font-black text-muted uppercase tracking-wider">Total</span>
-          <span className="text-xl font-black text-ink">{total.toFixed(2)} MT</span>
+          <span className="text-xl font-black text-ink num">{total.toFixed(2)} MT</span>
         </div>
 
         <div>
@@ -79,7 +79,7 @@ function CashModal({
             value={received}
             onChange={e => setReceived(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && num >= total) onComplete(num); }}
-            className="w-full px-4 py-2.5 bg-surface border-2 border-accent/30 focus:border-accent rounded-lg text-xl font-black text-accent focus:outline-none transition-colors"
+            className="w-full px-4 py-3 bg-surface border-2 border-accent/30 focus:border-accent rounded-lg text-2xl font-black text-accent num focus:outline-none transition-colors"
             placeholder={total.toFixed(2)}
           />
         </div>
@@ -87,28 +87,28 @@ function CashModal({
         <div className="grid grid-cols-5 gap-1.5">
           {[50, 100, 200, 500, 1000].map(v => (
             <button key={v} onClick={() => setReceived(v.toString())}
-              className="py-2 rounded-lg bg-surface hover:bg-black/10 text-xs font-bold transition-colors border border-black/[0.06]">
+              className="h-11 rounded-lg bg-surface hover:bg-black/10 active:bg-black/15 text-sm font-bold num transition-colors border border-black/[0.06]">
               {v}
             </button>
           ))}
         </div>
 
         <button onClick={() => setReceived(total.toFixed(2))}
-          className="w-full py-1.5 rounded-lg border border-black/[0.07] text-xs font-semibold text-muted hover:bg-surface transition-colors">
+          className="w-full py-2 rounded-lg border border-black/[0.07] text-xs font-semibold text-muted hover:bg-surface transition-colors">
           Quantia Exata
         </button>
 
         {change > 0 && (
           <div className="flex items-center justify-between bg-success/8 border border-success/20 rounded-lg px-4 py-2.5">
             <span className="text-xs font-black text-success uppercase tracking-wider">Troco</span>
-            <span className="text-xl font-black text-success">{change.toFixed(2)} MT</span>
+            <span className="text-xl font-black text-success num">{change.toFixed(2)} MT</span>
           </div>
         )}
 
         <button
           disabled={num < total}
           onClick={() => onComplete(num)}
-          className="w-full py-3.5 bg-success text-white rounded-lg font-black text-sm hover:bg-success/90 transition-all shadow-md shadow-success/20 disabled:opacity-30 disabled:shadow-none"
+          className="w-full h-12 bg-success text-white rounded-lg font-black text-sm hover:bg-success/90 transition-all shadow-md shadow-success/20 disabled:opacity-30 disabled:shadow-none"
         >
           Concluir Venda · Enter
         </button>
@@ -117,16 +117,23 @@ function CashModal({
   );
 }
 
-// ─── M-Pesa confirm modal (manual confirmation — no STK push) ────────────────
-function MpesaConfirmModal({
-  total, onConfirm, onClose,
-}: { total: number; onConfirm: () => void; onClose: () => void }) {
+// ─── Mobile-money confirm (manual — no STK push). One shell, two providers ───
+type MobileMoneyMethod = 'mpesa' | 'emola';
+const MOBILE_MONEY: Record<MobileMoneyMethod, { label: string; brandClass: string }> = {
+  mpesa: { label: 'M-Pesa', brandClass: 'text-mpesa' },
+  emola: { label: 'Emola',  brandClass: 'text-emola' },
+};
+
+function MobileMoneyConfirmModal({
+  method, total, onConfirm, onClose,
+}: { method: MobileMoneyMethod; total: number; onConfirm: () => void; onClose: () => void }) {
+  const { label, brandClass } = MOBILE_MONEY[method];
   return (
     <ModalShell onClose={onClose}>
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-black/[0.06] bg-surface/60">
         <div className="flex items-center gap-2">
-          <CurrencyCircleDollar size={17} weight="bold" className="text-accent" />
-          <span className="font-black text-[13px] uppercase tracking-wider">Pagamento M-Pesa</span>
+          <CurrencyCircleDollar size={17} weight="bold" className={brandClass} />
+          <span className="font-black text-[13px] uppercase tracking-wider">Pagamento {label}</span>
         </div>
         <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors">
           <X size={14} weight="bold" />
@@ -135,14 +142,14 @@ function MpesaConfirmModal({
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between bg-surface rounded-lg px-4 py-3">
           <span className="text-[11px] font-black text-muted uppercase tracking-wider">Total a Receber</span>
-          <span className="text-xl font-black text-ink">{total.toFixed(2)} MT</span>
+          <span className="text-xl font-black text-ink num">{total.toFixed(2)} MT</span>
         </div>
         <p className="text-[12px] text-muted font-medium leading-relaxed text-center">
-          Confirme que o cliente efectuou a transferência M-Pesa antes de concluir a venda.
+          Confirme que o cliente efectuou a transferência {label} antes de concluir a venda.
         </p>
         <button
           onClick={onConfirm}
-          className="w-full py-3.5 bg-success text-white rounded-lg font-black text-sm hover:bg-success/90 transition-all shadow-md shadow-success/20"
+          className="w-full h-12 bg-success text-white rounded-lg font-black text-sm hover:bg-success/90 transition-all shadow-md shadow-success/20"
         >
           Confirmar Pagamento Recebido
         </button>
@@ -178,7 +185,7 @@ function AddProductModal({
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-black/[0.06] bg-surface/60">
         <div className="flex items-center gap-3">
           <span className="font-black text-[13px] uppercase tracking-wider">Novo Produto</span>
-          <span className="font-mono text-[11px] bg-accent/10 text-accent px-2 py-0.5 rounded">{barcode}</span>
+          <span className="font-mono text-[11px] bg-accent/10 text-accent px-2 py-0.5 rounded num">{barcode}</span>
         </div>
         <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors">
           <X size={14} weight="bold" />
@@ -227,11 +234,11 @@ function AddProductModal({
 
       <div className="px-5 pb-5 flex gap-2">
         <button onClick={onClose}
-          className="flex-1 py-2.5 rounded-lg border border-black/[0.08] font-bold text-sm hover:bg-surface transition-colors">
+          className="flex-1 h-11 rounded-lg border border-black/[0.08] font-bold text-sm hover:bg-surface transition-colors">
           Cancelar
         </button>
         <button disabled={!form.name || !form.price} onClick={handle}
-          className="flex-[2] py-2.5 rounded-lg bg-accent text-white font-bold text-sm hover:bg-accent/90 transition-colors shadow-md shadow-accent/20 disabled:opacity-30 disabled:shadow-none">
+          className="flex-[2] h-11 rounded-lg bg-accent text-white font-bold text-sm hover:bg-accent/90 transition-colors shadow-md shadow-accent/20 disabled:opacity-30 disabled:shadow-none">
           Guardar e Adicionar ao Carrinho
         </button>
       </div>
@@ -244,6 +251,7 @@ function EndOfShiftModal({ sales, onClose }: { sales: Sale[]; onClose: () => voi
   const totalRevenue = sales.reduce((s, x) => s + x.total, 0);
   const cashRevenue  = sales.filter(x => x.paymentMethod === 'cash').reduce((s, x) => s + x.total, 0);
   const mpesaRevenue = sales.filter(x => x.paymentMethod === 'mpesa').reduce((s, x) => s + x.total, 0);
+  const emolaRevenue = sales.filter(x => x.paymentMethod === 'emola').reduce((s, x) => s + x.total, 0);
   const totalItems   = sales.reduce((s, x) => s + x.items.reduce((a, i) => a + i.quantity, 0), 0);
   const avgBasket    = sales.length > 0 ? totalRevenue / sales.length : 0;
 
@@ -283,27 +291,37 @@ function EndOfShiftModal({ sales, onClose }: { sales: Sale[]; onClose: () => voi
           )}
         </div>
 
-        {/* Method split */}
+        {/* Method split — 3-up for cash / M-Pesa / Emola */}
         {sales.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl bg-surface border border-black/[0.06] p-3 text-center">
               <div className="text-[9px] font-black text-muted uppercase tracking-[0.12em] mb-1">Dinheiro</div>
-              <div className="text-[20px] font-black text-ink tabular-nums leading-none">
+              <div className="text-[18px] font-black text-ink tabular-nums leading-none">
                 {cashRevenue.toFixed(0)}
-                <span className="text-[11px] ml-0.5 text-muted">MT</span>
+                <span className="text-[10px] ml-0.5 text-muted">MT</span>
               </div>
               <div className="text-[10px] text-muted mt-0.5">
                 {sales.filter(x => x.paymentMethod === 'cash').length} vendas
               </div>
             </div>
-            <div className="rounded-xl bg-accent/[0.07] border border-accent/15 p-3 text-center">
-              <div className="text-[9px] font-black text-accent/80 uppercase tracking-[0.12em] mb-1">M-Pesa</div>
-              <div className="text-[20px] font-black text-accent tabular-nums leading-none">
+            <div className="rounded-xl bg-mpesa/[0.07] border border-mpesa/20 p-3 text-center">
+              <div className="text-[9px] font-black text-mpesa/85 uppercase tracking-[0.12em] mb-1">M-Pesa</div>
+              <div className="text-[18px] font-black text-mpesa tabular-nums leading-none">
                 {mpesaRevenue.toFixed(0)}
-                <span className="text-[11px] ml-0.5 text-accent/70">MT</span>
+                <span className="text-[10px] ml-0.5 text-mpesa/70">MT</span>
               </div>
-              <div className="text-[10px] text-accent/70 mt-0.5">
+              <div className="text-[10px] text-mpesa/70 mt-0.5">
                 {sales.filter(x => x.paymentMethod === 'mpesa').length} vendas
+              </div>
+            </div>
+            <div className="rounded-xl bg-emola/[0.08] border border-emola/25 p-3 text-center">
+              <div className="text-[9px] font-black text-emola/85 uppercase tracking-[0.12em] mb-1">Emola</div>
+              <div className="text-[18px] font-black text-emola tabular-nums leading-none">
+                {emolaRevenue.toFixed(0)}
+                <span className="text-[10px] ml-0.5 text-emola/70">MT</span>
+              </div>
+              <div className="text-[10px] text-emola/70 mt-0.5">
+                {sales.filter(x => x.paymentMethod === 'emola').length} vendas
               </div>
             </div>
           </div>
@@ -344,7 +362,11 @@ function EndOfShiftModal({ sales, onClose }: { sales: Sale[]; onClose: () => voi
 }
 
 // ─── Payment success flash ────────────────────────────────────────────────────
-function PaymentFlash({ method, total }: { method: 'cash' | 'mpesa'; total: number }) {
+function PaymentFlash({ method, total }: { method: 'cash' | 'mpesa' | 'emola'; total: number }) {
+  const label =
+    method === 'mpesa' ? 'M-Pesa Confirmado' :
+    method === 'emola' ? 'Emola Confirmado' :
+                         'Pagamento Recebido';
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -368,7 +390,7 @@ function PaymentFlash({ method, total }: { method: 'cash' | 'mpesa'; total: numb
             <span className="text-[26px] ml-2 font-bold opacity-75">MT</span>
           </div>
           <div className="text-[12px] font-black uppercase tracking-[0.22em] mt-3 opacity-70">
-            {method === 'mpesa' ? 'M-Pesa Confirmado' : 'Pagamento Recebido'}
+            {label}
           </div>
         </div>
       </motion.div>
@@ -378,7 +400,14 @@ function PaymentFlash({ method, total }: { method: 'cash' | 'mpesa'; total: numb
 
 // ─── Sale receipt ─────────────────────────────────────────────────────────────
 function ReceiptModal({ sale, change, storeName, onClose }: { sale: Sale; change: number; storeName: string; onClose: () => void }) {
-  const isMpesa = sale.paymentMethod === 'mpesa';
+  const methodLabel =
+    sale.paymentMethod === 'mpesa' ? 'M-Pesa' :
+    sale.paymentMethod === 'emola' ? 'Emola'  :
+                                     'Dinheiro';
+  const methodPillClass =
+    sale.paymentMethod === 'mpesa' ? 'bg-mpesa/10 text-mpesa' :
+    sale.paymentMethod === 'emola' ? 'bg-emola/12 text-emola' :
+                                     'bg-ink/[0.07] text-ink';
   const timeStr = new Date(sale.timestamp).toLocaleTimeString('pt', {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   });
@@ -422,9 +451,9 @@ function ReceiptModal({ sale, change, storeName, onClose }: { sale: Sale; change
       <div className="px-4 pb-3 flex items-center justify-between min-h-[44px]">
         <span className={cn(
           'text-[10px] font-black uppercase tracking-[0.1em] px-2.5 py-1 rounded-full',
-          isMpesa ? 'bg-accent/10 text-accent' : 'bg-ink/[0.07] text-ink',
+          methodPillClass,
         )}>
-          {isMpesa ? 'M-Pesa' : 'Dinheiro'}
+          {methodLabel}
         </span>
         {change > 0 && (
           <div className="text-right">
@@ -464,36 +493,42 @@ interface CartRowProps {
 }
 function CartRow({ item, index, flash, onQtyChange, onRemove }: CartRowProps) {
   return (
-    <tr className={cn('group transition-colors duration-100', flash ? 'bg-success/10' : 'hover:bg-surface/60')}>
-      <td className="py-1.5 px-3 text-center text-xs font-mono text-muted">{index + 1}</td>
-      <td className="py-1.5 px-3">
-        <div className="font-semibold text-[13px] text-ink leading-tight">{item.name}</div>
-        <div className="font-mono text-[10px] text-muted/70">{item.barcode}</div>
+    <tr className={cn('transition-colors duration-100', flash ? 'bg-success/10' : 'hover:bg-surface/60')}>
+      <td className="py-2.5 px-3 text-center text-xs font-mono text-muted/60 num">{index + 1}</td>
+      <td className="py-2.5 px-3">
+        <div className="font-bold text-[15px] text-ink leading-snug">{item.name}</div>
       </td>
-      <td className="py-1.5 px-3 text-center text-[11px] font-mono text-muted">{item.unit}</td>
-      <td className="py-1.5 px-3 text-right text-[13px] font-semibold text-muted">{item.price.toFixed(2)}</td>
-      <td className="py-1.5 px-3">
+      <td className="py-2.5 px-3 text-center text-[11px] font-mono text-muted/70">{item.unit}</td>
+      <td className="py-2.5 px-3 text-right text-[13px] font-semibold text-muted num">{item.price.toFixed(2)}</td>
+      <td className="py-1.5 px-2">
         <div className="flex items-center justify-center gap-1">
-          <button onClick={() => onQtyChange(item.productId, item.quantity - 1)}
-            className="w-5 h-5 rounded flex items-center justify-center bg-surface hover:bg-black/10 transition-colors">
-            <Minus size={11} weight="bold" />
+          <button
+            onClick={() => onQtyChange(item.productId, item.quantity - 1)}
+            aria-label="Diminuir quantidade"
+            className="w-11 h-11 rounded-lg flex items-center justify-center bg-surface text-ink hover:bg-black/10 active:bg-black/15 transition-colors">
+            <Minus size={16} weight="bold" />
           </button>
           <input
             type="number" min={1} value={item.quantity}
             onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) onQtyChange(item.productId, v); }}
-            className="w-11 text-center text-[13px] font-black bg-white border border-black/[0.08] rounded focus:outline-none focus:border-accent px-1 py-0.5"
+            aria-label="Quantidade"
+            className="w-12 h-11 text-center text-[15px] font-black num bg-canvas border border-black/[0.08] rounded-lg focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
           />
-          <button onClick={() => onQtyChange(item.productId, item.quantity + 1)}
-            className="w-5 h-5 rounded flex items-center justify-center bg-surface hover:bg-black/10 transition-colors">
-            <Plus size={11} weight="bold" />
+          <button
+            onClick={() => onQtyChange(item.productId, item.quantity + 1)}
+            aria-label="Aumentar quantidade"
+            className="w-11 h-11 rounded-lg flex items-center justify-center bg-surface text-ink hover:bg-black/10 active:bg-black/15 transition-colors">
+            <Plus size={16} weight="bold" />
           </button>
         </div>
       </td>
-      <td className="py-1.5 px-3 text-right text-[13px] font-black text-ink">{item.subtotal.toFixed(2)}</td>
-      <td className="py-1.5 px-3 text-center">
-        <button onClick={() => onRemove(item.productId)}
-          className="w-5 h-5 rounded flex items-center justify-center text-muted hover:bg-danger/10 hover:text-danger transition-colors opacity-0 group-hover:opacity-100">
-          <X size={12} weight="bold" />
+      <td className="py-2.5 px-3 text-right text-[18px] font-black text-ink num leading-none">{item.subtotal.toFixed(2)}</td>
+      <td className="py-1.5 px-2 text-center">
+        <button
+          onClick={() => onRemove(item.productId)}
+          aria-label="Remover artigo"
+          className="w-11 h-11 rounded-lg flex items-center justify-center text-muted hover:bg-danger/10 hover:text-danger active:bg-danger/15 transition-colors">
+          <Trash size={16} weight="bold" />
         </button>
       </td>
     </tr>
@@ -524,6 +559,7 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
   const [notFound,      setNotFound]      = useState<string | null>(null);
   const [cashOpen,      setCashOpen]      = useState(false);
   const [mpesaOpen,     setMpesaOpen]     = useState(false);
+  const [emolaOpen,     setEmolaOpen]     = useState(false);
   const [saleNo,        setSaleNo]        = useState(saleNoProp ?? 1);
 
   // Sync when the parent (App.tsx) updates the next sale number from the backend
@@ -531,17 +567,31 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
     if (saleNoProp && saleNoProp > saleNo) setSaleNo(saleNoProp);
   }, [saleNoProp]);
   const [completedSale, setCompletedSale] = useState<{ sale: Sale; change: number } | null>(null);
-  const [paymentFlash,  setPaymentFlash]  = useState<{ method: 'cash' | 'mpesa'; total: number } | null>(null);
+  const [paymentFlash,  setPaymentFlash]  = useState<{ method: 'cash' | 'mpesa' | 'emola'; total: number } | null>(null);
   const [shiftOpen,     setShiftOpen]     = useState(false);
+  const [shiftMenuOpen, setShiftMenuOpen] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const shiftMenuRef    = useRef<HTMLDivElement>(null);
   const barcodeMap      = useMemo(() => buildBarcodeMap(products), [products]);
+
+  // Close the shift menu when clicking outside
+  useEffect(() => {
+    if (!shiftMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (shiftMenuRef.current && !shiftMenuRef.current.contains(e.target as Node)) {
+        setShiftMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', onDown);
+    return () => window.removeEventListener('mousedown', onDown);
+  }, [shiftMenuOpen]);
 
   // Assigned synchronously during render (not in an effect) so the value is
   // already current when autoFocus triggers blur on the barcode input during
   // the same DOM-commit cycle that opens the modal.
   const anyModalOpen = useRef(false);
-  anyModalOpen.current = !!(cashOpen || mpesaOpen || notFound || completedSale || paymentFlash || shiftOpen);
+  anyModalOpen.current = !!(cashOpen || mpesaOpen || emolaOpen || notFound || completedSale || paymentFlash || shiftOpen);
 
   const focusBarcode = useCallback(() => {
     setTimeout(() => barcodeInputRef.current?.focus(), 30);
@@ -601,6 +651,7 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
     if (e.key === 'Escape')  { setQuery(''); setSuggestions([]); }
     if (e.key === 'F4')      { e.preventDefault(); if (cart.length > 0) setCashOpen(true); }
     if (e.key === 'F5')      { e.preventDefault(); if (cart.length > 0) setMpesaOpen(true); }
+    if (e.key === 'F6')      { e.preventDefault(); if (cart.length > 0) setEmolaOpen(true); }
     if (e.key === 'F1')      { e.preventDefault(); clearCart(); }
   }, [query, barcodeMap, addToCart, suggestions, cart]);
 
@@ -608,6 +659,7 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
     const kd = (e: KeyboardEvent) => {
       if (e.key === 'F4') { e.preventDefault(); if (cart.length > 0) setCashOpen(true); }
       if (e.key === 'F5') { e.preventDefault(); if (cart.length > 0) setMpesaOpen(true); }
+      if (e.key === 'F6') { e.preventDefault(); if (cart.length > 0) setEmolaOpen(true); }
       if (e.key === 'F1') { e.preventDefault(); clearCart(); }
     };
     window.addEventListener('keydown', kd);
@@ -635,7 +687,7 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
   const tax      = 0;
   const total    = subtotal;
 
-  const completeSale = useCallback((method: 'cash' | 'mpesa', receivedAmount?: number) => {
+  const completeSale = useCallback((method: 'cash' | 'mpesa' | 'emola', receivedAmount?: number) => {
     const sale: Sale = {
       id: crypto.randomUUID(), number: saleNo,
       items: [...cart], subtotal, tax, total,
@@ -648,6 +700,7 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
     setCart([]);
     setCashOpen(false);
     setMpesaOpen(false);
+    setEmolaOpen(false);
     const change = receivedAmount !== undefined ? Math.max(0, receivedAmount - total) : 0;
     // Flash and receipt open together; flash clears after 1 s, revealing receipt underneath
     setPaymentFlash({ method, total });
@@ -670,10 +723,22 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
 
       <AnimatePresence>
         {mpesaOpen && (
-          <MpesaConfirmModal
+          <MobileMoneyConfirmModal
+            method="mpesa"
             total={total}
             onConfirm={() => completeSale('mpesa')}
             onClose={() => { setMpesaOpen(false); focusBarcode(); }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {emolaOpen && (
+          <MobileMoneyConfirmModal
+            method="emola"
+            total={total}
+            onConfirm={() => completeSale('emola')}
+            onClose={() => { setEmolaOpen(false); focusBarcode(); }}
           />
         )}
       </AnimatePresence>
@@ -698,7 +763,7 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
           <ReceiptModal
             sale={completedSale.sale}
             change={completedSale.change}
-            storeName={storeName ?? 'Lumina POS'}
+            storeName={storeName ?? 'Vela POS'}
             onClose={() => { setCompletedSale(null); focusBarcode(); }}
           />
         )}
@@ -754,17 +819,17 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
                 >
                   {suggestions.map(p => (
                     <button key={p.id} onMouseDown={e => { e.preventDefault(); addToCart(p); }}
-                      className="w-full flex items-center justify-between px-4 py-2 hover:bg-surface transition-colors text-left">
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface transition-colors text-left">
                       <div>
                         <span className="text-sm font-semibold text-ink">{p.name}</span>
-                        <span className="ml-2 text-[10px] font-mono text-muted">{p.barcode}</span>
+                        <span className="ml-2 text-[10px] font-mono text-muted num">{p.barcode}</span>
                         {p.requiresPrescription && (
                           <span className="ml-2 text-[9px] bg-danger/10 text-danger px-1.5 py-0.5 rounded font-black uppercase">Rx</span>
                         )}
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <div className="text-sm font-black text-accent">{p.price.toFixed(2)} MT</div>
-                        <div className={cn('text-[10px] font-bold', p.stock <= p.minStock ? 'text-danger' : 'text-muted')}>
+                        <div className="text-sm font-black text-accent num">{p.price.toFixed(2)} MT</div>
+                        <div className={cn('text-[10px] font-bold num', p.stock <= p.minStock ? 'text-danger' : 'text-muted')}>
                           Stock: {p.stock} {p.unit}
                         </div>
                       </div>
@@ -775,22 +840,19 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
             </AnimatePresence>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[11px] text-muted font-semibold select-none shrink-0">
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-black/[0.08] text-[10px] font-mono">F1</kbd>
-            <span className="mr-2">Nova</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-black/[0.08] text-[10px] font-mono">F4</kbd>
-            <span className="mr-2">Cash</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-black/[0.08] text-[10px] font-mono">F5</kbd>
-            <span>M-Pesa</span>
-          </div>
         </div>
 
         {/* Cart table */}
         <div className="flex-1 overflow-auto">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted select-none">
-              <Barcode size={52} weight="thin" className="mb-3 opacity-25" />
-              <p className="text-sm font-semibold opacity-40">Escaneie um produto para começar</p>
+            <div className="h-full flex flex-col items-center justify-center text-center px-6 select-none">
+              <div className="w-16 h-16 rounded-2xl bg-accent/8 flex items-center justify-center mb-5">
+                <Barcode size={32} weight="bold" className="text-accent" />
+              </div>
+              <p className="text-[16px] font-black text-ink mb-1.5">Pronto para vender</p>
+              <p className="text-[13px] text-muted font-medium max-w-[300px] leading-relaxed">
+                Escaneie o código de barras ou escreva o nome do produto na barra acima.
+              </p>
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -820,67 +882,106 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
           )}
         </div>
 
-        {/* Bottom status bar */}
+        {/* Bottom status bar — active sale on the left, shift menu on the right */}
         <div className="px-4 py-2 bg-surface border-t border-black/[0.06] flex items-center justify-between text-xs text-muted">
-          <div className="flex items-center gap-3">
-            <span>{cart.length} {cart.length === 1 ? 'artigo' : 'artigos'} · Venda #{saleNo}</span>
-            <button onClick={() => setShiftOpen(true)}
-              className="flex items-center gap-1 font-semibold hover:text-ink transition-colors">
-              <ChartLineUp size={11} weight="bold" />
-              Resumo{sales.length > 0 && <span className="ml-0.5 px-1 py-px bg-black/[0.06] rounded text-[9px] font-black">{sales.length}</span>}
-            </button>
-            {onOpenReturns && (
-              <button onClick={onOpenReturns} className="flex items-center gap-1 font-semibold hover:text-ink transition-colors">
-                <ArrowCounterClockwise size={11} weight="bold" />Devoluções
-              </button>
-            )}
-            {onOpenReconciliation && (
-              <button onClick={onOpenReconciliation} className="flex items-center gap-1 font-semibold hover:text-ink transition-colors">
-                Fecho
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="num shrink-0">{cart.length} {cart.length === 1 ? 'artigo' : 'artigos'}</span>
+            {cart.length > 0 && (
+              <button onClick={clearCart}
+                className="flex items-center gap-1.5 hover:text-danger transition-colors font-semibold">
+                <ArrowCounterClockwise size={12} weight="bold" />
+                Cancelar
+                <kbd className="ml-0.5 text-[9px] font-mono opacity-60">F1</kbd>
               </button>
             )}
           </div>
-          {cart.length > 0 && (
-            <button onClick={clearCart} className="flex items-center gap-1.5 hover:text-danger transition-colors font-semibold">
-              <ArrowCounterClockwise size={12} weight="bold" />
-              Cancelar (F1)
+
+          <div className="relative" ref={shiftMenuRef}>
+            <button
+              onClick={() => setShiftMenuOpen(o => !o)}
+              aria-expanded={shiftMenuOpen}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 h-7 rounded-md font-semibold transition-colors',
+                shiftMenuOpen ? 'bg-black/[0.06] text-ink' : 'hover:text-ink hover:bg-black/[0.04]',
+              )}
+            >
+              Fim de turno
+              {sales.length > 0 && (
+                <span className="px-1 py-px bg-black/[0.06] rounded text-[9px] font-black num">{sales.length}</span>
+              )}
+              <CaretDown size={10} weight="bold" className={cn('transition-transform', shiftMenuOpen && 'rotate-180')} />
             </button>
-          )}
+
+            <AnimatePresence>
+              {shiftMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.12, ease: 'easeOut' }}
+                  className="absolute bottom-full right-0 mb-1.5 min-w-[180px] bg-canvas border border-black/[0.08] rounded-lg shadow-lg overflow-hidden z-50"
+                >
+                  <button
+                    onClick={() => { setShiftMenuOpen(false); setShiftOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3 h-11 text-[12px] font-semibold text-ink hover:bg-surface transition-colors"
+                  >
+                    <ChartLineUp size={14} weight="bold" className="text-muted" />
+                    Resumo do turno
+                  </button>
+                  {onOpenReturns && (
+                    <button
+                      onClick={() => { setShiftMenuOpen(false); onOpenReturns(); }}
+                      className="w-full flex items-center gap-2.5 px-3 h-11 text-[12px] font-semibold text-ink hover:bg-surface transition-colors border-t border-black/[0.04]"
+                    >
+                      <ArrowCounterClockwise size={14} weight="bold" className="text-muted" />
+                      Devoluções
+                    </button>
+                  )}
+                  {onOpenReconciliation && (
+                    <button
+                      onClick={() => { setShiftMenuOpen(false); onOpenReconciliation(); }}
+                      className="w-full flex items-center gap-2.5 px-3 h-11 text-[12px] font-semibold text-ink hover:bg-surface transition-colors border-t border-black/[0.04]"
+                    >
+                      <CurrencyCircleDollar size={14} weight="bold" className="text-muted" />
+                      Fecho de caixa
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
       {/* ── Right: totals + payment ── */}
-      <div className="w-[280px] flex flex-col bg-white border-l border-black/[0.06] shrink-0">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-black/[0.06] flex items-center justify-between">
-          <span className="text-[11px] font-black text-muted uppercase tracking-wider">Venda Actual</span>
-          <span className="font-mono text-[11px] bg-surface px-2 py-0.5 rounded border border-black/[0.06]">#{saleNo}</span>
-        </div>
+      <div className="relative w-[280px] lg:w-[320px] xl:w-[360px] 2xl:w-[400px] flex flex-col bg-canvas border-l border-black/[0.06] shrink-0">
+        {/* Sale number — subtle corner badge, no longer dominant chrome */}
+        <span className="absolute top-3 right-4 font-mono text-[10px] text-muted/50 num select-none">#{saleNo}</span>
 
-        {/* Total — owns the panel */}
-        <div className="flex-1 flex flex-col items-center justify-center px-5 py-4">
-          <span className="text-[10px] font-black text-muted uppercase tracking-[0.16em] mb-2">Total a Pagar</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className={cn(
-              'text-[48px] font-black tabular-nums leading-none transition-colors duration-150',
-              total === 0 ? 'text-black/15' : 'text-ink',
-            )}>
-              {total.toFixed(2)}
+        {/* Total — owns the panel. Two states: empty (waiting) and active (number). */}
+        {cart.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-5 py-4 text-center select-none">
+            <span className="text-[10px] font-black text-muted/60 uppercase tracking-[0.16em] mb-3">Sem artigos</span>
+            <span className="text-[15px] font-bold text-muted/80 leading-snug">
+              Aguardando<br />primeiro item
             </span>
-            <span className={cn(
-              'text-[20px] font-bold leading-none mb-0.5 transition-colors duration-150',
-              total === 0 ? 'text-black/15' : 'text-muted',
-            )}>MT</span>
           </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center px-5 py-4">
+            <span className="text-[10px] font-black text-muted uppercase tracking-[0.16em] mb-2">Total a Pagar</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[48px] lg:text-[56px] xl:text-[64px] 2xl:text-[72px] font-black tabular-nums leading-none text-ink">
+                {total.toFixed(2)}
+              </span>
+              <span className="text-[20px] xl:text-[24px] font-bold leading-none mb-0.5 text-muted">MT</span>
+            </div>
 
-          {/* Secondary breakdown */}
-          <div className="mt-4 w-full border-t border-black/[0.05] pt-3">
-            <div className="flex justify-between text-[11px]">
-              <span className="text-muted">Artigos no carrinho</span>
-              <span className="font-semibold text-ink tabular-nums">{cart.reduce((s, i) => s + i.quantity, 0)}</span>
+            <div className="mt-4 w-full border-t border-black/[0.05] pt-3">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-muted">Artigos no carrinho</span>
+                <span className="font-semibold text-ink num">{cart.reduce((s, i) => s + i.quantity, 0)}</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Low stock warning */}
         {cart.some(i => { const p = products.find(p => p.id === i.productId); return p && p.stock <= p.minStock; }) && (
@@ -891,26 +992,34 @@ export function POSModule({ products, sales, saleNo: saleNoProp, onNotify, onAdd
         )}
 
         <div className="px-4 pb-4 space-y-2">
-          {/* M-Pesa — primary, tall */}
-          <button
-            disabled={cart.length === 0}
-            onClick={() => setMpesaOpen(true)}
-            className="w-full py-4 rounded-xl bg-accent text-white font-black text-[15px] uppercase tracking-wider hover:bg-accent/90 transition-all shadow-md shadow-accent/25 disabled:opacity-30 disabled:shadow-none flex items-center justify-center gap-2.5"
-          >
-            <div className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
-            M-Pesa
-            <kbd className="ml-auto text-[10px] font-mono bg-white/20 border border-white/30 px-1.5 py-0.5 rounded">F5</kbd>
-          </button>
+          {/* Mobile money — M-Pesa (red) + Emola (orange), side-by-side primary actions */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              disabled={cart.length === 0}
+              onClick={() => setMpesaOpen(true)}
+              className="py-4 rounded-xl bg-mpesa text-white font-black text-[15px] uppercase tracking-wider hover:bg-mpesa/90 transition-colors shadow-md shadow-mpesa/25 disabled:opacity-30 disabled:shadow-none flex items-center justify-center gap-2"
+            >
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
+              M-Pesa
+            </button>
+            <button
+              disabled={cart.length === 0}
+              onClick={() => setEmolaOpen(true)}
+              className="py-4 rounded-xl bg-emola text-white font-black text-[15px] uppercase tracking-wider hover:bg-emola/90 transition-colors shadow-md shadow-emola/25 disabled:opacity-30 disabled:shadow-none flex items-center justify-center gap-2"
+            >
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
+              Emola
+            </button>
+          </div>
 
-          {/* Cash — secondary, compact */}
+          {/* Cash — secondary, outlined */}
           <button
             disabled={cart.length === 0}
             onClick={() => setCashOpen(true)}
-            className="w-full py-2.5 rounded-xl border border-black/[0.08] font-bold text-[12px] uppercase tracking-wider text-muted hover:bg-black/[0.04] hover:text-ink transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl border border-black/[0.08] font-bold text-[12px] uppercase tracking-wider text-muted hover:bg-black/[0.04] hover:text-ink transition-colors disabled:opacity-30 flex items-center justify-center gap-2"
           >
             <CurrencyCircleDollar size={14} weight="bold" />
             Dinheiro
-            <kbd className="ml-auto text-[10px] font-mono bg-surface border border-black/[0.08] px-1.5 py-0.5 rounded">F4</kbd>
           </button>
         </div>
       </div>

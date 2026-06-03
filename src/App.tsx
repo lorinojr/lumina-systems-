@@ -26,6 +26,7 @@ import { AdminLoginModal }      from './components/AdminLoginModal';
 import { CashierLoginScreen }    from './components/CashierLoginScreen';
 import { PlatformLoginModal }   from './components/PlatformLoginModal';
 import { ErrorBoundary }        from './components/ErrorBoundary';
+import { VelaLogo }              from './components/VelaLogo';
 
 const InventoryModule = lazy(() => import('./components/InventoryModule').then(m => ({ default: m.InventoryModule })));
 const ReportsModule   = lazy(() => import('./components/ReportsModule').then(m => ({ default: m.ReportsModule })));
@@ -81,18 +82,20 @@ function Sidebar({ active, onChange, canAccess, isAdmin, onLock, onCashierLogout
   const visibleItems = ALL_NAV_ITEMS.filter(item => canAccess(item.id as ActiveModule));
   const platformActive = active === 'platform' && isPlatformAdmin;
   return (
-    <nav className="w-[60px] shrink-0 bg-surface border-r border-black/[0.06] flex flex-col items-center py-3 gap-0.5 z-30">
+    <nav className="w-[64px] shrink-0 bg-surface border-r border-black/[0.06] flex flex-col items-center py-3 gap-1 z-30">
+      <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center text-white shadow-sm shadow-accent/25 mb-1">
+        <VelaLogo size={20} title="Vela" />
+      </div>
+      <div className="w-6 h-px bg-black/[0.08] mb-1.5" aria-hidden="true" />
       {visibleItems.map(item => {
         const isActive = active === item.id;
         return (
           <button key={item.id} onClick={() => onChange(item.id as ActiveModule)}
             title={`${item.label} (Ctrl+${item.shortcut})`}
-            className={cn('relative w-11 rounded-xl flex flex-col items-center justify-center py-2 gap-0.5 transition-all',
-              isActive ? 'bg-accent text-white shadow-sm shadow-accent/30' : 'text-muted hover:bg-black/[0.05] hover:text-ink')}>
-            <item.icon size={17} weight={isActive ? 'fill' : 'bold'} />
-            <span className={cn('text-[8.5px] font-bold leading-none tracking-wide', isActive ? 'text-white/80' : 'text-muted/70')}>
-              {item.label.slice(0, 5)}
-            </span>
+            aria-label={item.label}
+            className={cn('relative w-11 h-11 rounded-xl flex items-center justify-center transition-colors duration-150',
+              isActive ? 'bg-accent text-white shadow-sm shadow-accent/25' : 'text-muted hover:bg-black/[0.05] hover:text-ink')}>
+            <item.icon size={22} weight={isActive ? 'fill' : 'bold'} />
           </button>
         );
       })}
@@ -100,30 +103,31 @@ function Sidebar({ active, onChange, canAccess, isAdmin, onLock, onCashierLogout
       {/* Bottom controls — lock / cashier logout / platform */}
       <div className="mt-auto flex flex-col items-center gap-1 pb-0.5">
         {isAdmin && (
-          <button onClick={onLock} title="Bloquear sessão"
-            className="w-11 rounded-xl flex flex-col items-center justify-center py-2 gap-0.5 transition-all text-success hover:bg-success/10">
-            <LockOpen size={15} weight="bold" />
-            <span className="text-[7.5px] font-bold leading-none tracking-wide" style={{ color: 'inherit' }}>Admin</span>
+          <button onClick={onLock} title="Bloquear sessão" aria-label="Bloquear sessão"
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors duration-150 text-success hover:bg-success/10">
+            <LockOpen size={20} weight="bold" />
           </button>
         )}
         {!isAdmin && (
-          <button onClick={onCashierLogout} title="Terminar turno"
-            className="w-11 rounded-xl flex flex-col items-center justify-center py-2 gap-0.5 transition-all text-muted hover:bg-black/[0.05] hover:text-ink">
-            <LockOpen size={15} weight="bold" />
-            <span className="text-[7.5px] font-bold leading-none tracking-wide" style={{ color: 'inherit' }}>Turno</span>
+          <button onClick={onCashierLogout} title="Terminar turno" aria-label="Terminar turno"
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors duration-150 text-muted hover:bg-black/[0.05] hover:text-ink">
+            <LockOpen size={20} weight="bold" />
           </button>
         )}
-        {/* Platform admin entry point — subtle, always visible */}
+        {/* Platform admin entry — same warm accent family, with three states */}
         <button
           onClick={onPlatformClick}
-          title="Plataforma Lumina (Ctrl+Shift+P)"
-          className="w-11 h-8 rounded-xl flex items-center justify-center transition-all"
-          style={platformActive
-            ? { background: 'oklch(0.48 0.20 280)', color: 'white', boxShadow: '0 2px 8px oklch(0.48 0.20 280 / 0.30)' }
-            : isPlatformAdmin
-            ? { color: 'oklch(0.52 0.18 280)' }
-            : { color: 'oklch(0.72 0 0)', opacity: 0.35 }}>
-          <Buildings size={14} weight={platformActive ? 'fill' : 'bold'} />
+          title="Plataforma Vela (Ctrl+Shift+P)"
+          aria-label="Plataforma Vela"
+          className={cn(
+            'w-11 h-11 rounded-xl flex items-center justify-center transition-colors duration-150',
+            platformActive
+              ? 'bg-ink text-white shadow-sm'
+              : isPlatformAdmin
+              ? 'text-ink hover:bg-black/[0.05]'
+              : 'text-muted/35 hover:text-muted hover:bg-black/[0.04]'
+          )}>
+          <Buildings size={20} weight={platformActive ? 'fill' : 'bold'} />
         </button>
       </div>
     </nav>
@@ -147,9 +151,10 @@ function TitleBar({ active, backendOnline, storeName, pendingOps, userName }: {
   }, []);
 
   return (
-    <div className="h-9 bg-white border-b border-black/[0.06] flex items-center justify-between px-4 shrink-0 z-20">
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] font-black text-muted uppercase tracking-widest">{storeName ?? 'Lumina POS'}</span>
+    <div className="h-9 bg-canvas border-b border-black/[0.06] flex items-center justify-between px-4 shrink-0 z-20">
+      <div className="flex items-center gap-2.5">
+        <VelaLogo size={12} className="text-accent" title="Vela" />
+        <span className="text-[11px] font-black text-muted uppercase tracking-widest">{storeName ?? 'Vela POS'}</span>
         <span className="text-black/10">·</span>
         <span className="text-[11px] font-semibold text-ink">{label}</span>
       </div>
@@ -167,7 +172,7 @@ function TitleBar({ active, backendOnline, storeName, pendingOps, userName }: {
           <span className="font-semibold">{online ? 'Rede OK' : 'Sem rede'}</span>
         </div>
         <div className="w-px h-3 bg-black/[0.07]" />
-        <span className="font-mono font-bold text-ink">
+        <span className="font-mono font-bold text-ink num">
           {time.toLocaleTimeString('pt', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
         </span>
       </div>
@@ -423,7 +428,8 @@ export default function App() {
   if (!auth.currentUser) {
     return (<>{persistentOverlays}
       <CashierLoginScreen cashiers={auth.cashiers} storeName={config.storeName}
-        onLoginCashier={auth.loginCashier} onLoginAdmin={auth.loginStoreAdmin} /></>);
+        onLoginCashier={auth.loginCashier} onLoginAdmin={auth.loginStoreAdmin}
+        onChangeStore={clearConfig} /></>);
   }
 
   // ─── Route: main app ──────────────────────────────────────────

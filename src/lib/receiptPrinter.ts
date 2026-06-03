@@ -61,10 +61,10 @@ td{padding:2px 0;vertical-align:top}
 <tr class="tot"><td>TOTAL</td><td class="r">${fmt(sale.total)} MT</td></tr>
 </table>
 <div class="d"></div>
-<div>Pagamento: ${sale.paymentMethod === 'mpesa' ? 'M-Pesa' : 'Dinheiro'}</div>
+<div>Pagamento: ${sale.paymentMethod === 'mpesa' ? 'M-Pesa' : sale.paymentMethod === 'emola' ? 'Emola' : 'Dinheiro'}</div>
 ${change && change > 0 ? `<div class="b">Troco: ${fmt(change)} MT</div>` : ''}
 <div class="d"></div>
 <div class="c" style="margin-top:8px">Obrigado pela preferência!</div>
-<div class="c" style="margin-top:16px;font-size:8px">Lumina POS</div>
+<div class="c" style="margin-top:16px;font-size:8px">Vela POS</div>
 </body></html>`;
 }

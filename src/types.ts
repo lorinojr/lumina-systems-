@@ -25,6 +25,8 @@ export interface CartItem {
   unit: string;
 }
 
+export type PaymentMethod = 'cash' | 'mpesa' | 'emola';
+
 export interface Sale {
   id: string;
   number: number;
@@ -32,7 +34,7 @@ export interface Sale {
   subtotal: number;
   tax: number;
   total: number;
-  paymentMethod: 'cash' | 'mpesa';
+  paymentMethod: PaymentMethod;
   timestamp: Date;
   cashierId?: string | null;
   cashierName?: string | null;

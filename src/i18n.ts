@@ -10,7 +10,7 @@ export const translations = {
       security: 'Shield',
     },
     status: {
-      online: 'Lumina OS // Online',
+      online: 'Vela OS // Online',
       stable: '4G STABLE',
     },
     pos: {
@@ -116,7 +116,7 @@ export const translations = {
       paymentProcessed: 'Payment processed for',
       confirmPayment: 'Confirm Payment',
       whatsappReminder: 'WhatsApp Reminder',
-      reminderTemplate: 'Hello {name}, this is a friendly reminder regarding your outstanding balance of {amount} MT at Lumina. Please settle when possible.',
+      reminderTemplate: 'Hello {name}, this is a friendly reminder regarding your outstanding balance of {amount} MT at Vela. Please settle when possible.',
       sendReminder: 'Send Reminder',
       sendingTo: 'Sending to',
       reminderSent: 'Reminder sent to',
@@ -149,7 +149,7 @@ export const translations = {
       resetPermissions: 'Reset Permissions',
       appPinning: 'App Pinning',
       locked: 'System Locked',
-      restricted: 'Hardware access restricted. Monthly rental payment not detected in Lumina Cloud. Please contact support to restore access.',
+      restricted: 'Hardware access restricted. Monthly rental payment not detected in Vela Cloud. Please contact support to restore access.',
       unlock: 'Unlock Admin',
     },
     killSwitch: {
@@ -158,7 +158,7 @@ export const translations = {
       secondaryMessage: 'A sua mensalidade de {month} ({amount} MT) está em atraso. Para reativar as vendas e o acesso ao stock, por favor efetue o pagamento abaixo.',
       payNowMpesa: 'Pagar Agora via M-Pesa',
       difficulties: 'Dificuldades?',
-      callSupport: 'Ligue para o Suporte Lumina',
+      callSupport: 'Ligue para o Suporte Vela',
       verifying: 'A aguardar confirmação...',
       thankYouReactivated: 'Obrigado. Sistema Reativado.',
       daysUntilBlock: 'dias para o bloqueio',
@@ -184,7 +184,7 @@ export const translations = {
       security: 'Escudo',
     },
     status: {
-      online: 'Lumina OS // Online',
+      online: 'Vela OS // Online',
       stable: '4G ESTÁVEL',
     },
     pos: {
@@ -290,7 +290,7 @@ export const translations = {
       paymentProcessed: 'Pagamento processado para',
       confirmPayment: 'Confirmar Pagamento',
       whatsappReminder: 'Lembrete WhatsApp',
-      reminderTemplate: 'Olá {name}, este é um lembrete amigável sobre o seu saldo devedor de {amount} MT na Lumina. Por favor, liquide quando possível.',
+      reminderTemplate: 'Olá {name}, este é um lembrete amigável sobre o seu saldo devedor de {amount} MT na Vela. Por favor, liquide quando possível.',
       sendReminder: 'Enviar Lembrete',
       sendingTo: 'Enviando para',
       reminderSent: 'Lembrete enviado para',
@@ -323,7 +323,7 @@ export const translations = {
       resetPermissions: 'Redefinir Permissões',
       appPinning: 'Fixação de App',
       locked: 'Sistema Bloqueado',
-      restricted: 'Acesso ao hardware restrito. Pagamento de aluguer mensal não detectado na Lumina Cloud. Por favor, contacte o suporte para restaurar o acesso.',
+      restricted: 'Acesso ao hardware restrito. Pagamento de aluguer mensal não detectado na Vela Cloud. Por favor, contacte o suporte para restaurar o acesso.',
       unlock: 'Desbloquear Admin',
     },
     killSwitch: {
@@ -332,7 +332,7 @@ export const translations = {
       secondaryMessage: 'A sua mensalidade de {month} ({amount} MT) está em atraso. Para reativar as vendas e o acesso ao stock, por favor efetue o pagamento abaixo.',
       payNowMpesa: 'Pagar Agora via M-Pesa',
       difficulties: 'Dificuldades?',
-      callSupport: 'Ligue para o Suporte Lumina',
+      callSupport: 'Ligue para o Suporte Vela',
       verifying: 'A aguardar confirmação...',
       thankYouReactivated: 'Obrigado. Sistema Reativado.',
       daysUntilBlock: 'dias para o bloqueio',

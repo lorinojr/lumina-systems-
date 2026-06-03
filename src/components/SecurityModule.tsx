@@ -19,7 +19,7 @@ function Section({
   icon: React.ReactNode; iconBg: string; title: string; children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-black/[0.06] overflow-hidden">
+    <div className="bg-canvas rounded-xl border border-black/[0.06] overflow-hidden">
       <div className="px-5 py-3.5 border-b border-black/[0.06] bg-surface/40 flex items-center gap-2.5">
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>{icon}</div>
         <h3 className="text-[11px] font-black text-ink uppercase tracking-[0.1em]">{title}</h3>
@@ -48,21 +48,22 @@ function SenhaInput({ label, onComplete, disabled = false }: {
   return (
     <div>
       <div className="text-[10px] font-bold text-muted uppercase tracking-[0.1em] mb-2">{label}</div>
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-3 items-center min-h-[20px]">
         {Array.from({ length: PIN_LEN }).map((_, i) => (
           <div key={i} className={`w-2.5 h-2.5 rounded-full transition-colors ${i < digits.length ? 'bg-accent' : 'bg-black/10'}`} />
         ))}
         {done && <button onClick={() => { setDigits([]); setDone(false); }} className="ml-2 text-[10px] text-muted hover:text-accent font-semibold">apagar</button>}
       </div>
       {!done && (
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-6 gap-1.5">
           {['1','2','3','4','5','6','7','8','9','0'].map(k => (
             <button key={k} onClick={() => press(k)} disabled={disabled}
-              className="h-9 rounded-lg bg-surface text-[13px] font-black text-ink hover:bg-black/[0.07] active:scale-95 transition-all disabled:opacity-40">{k}</button>
+              className="h-11 rounded-lg bg-surface border border-black/[0.05] text-[14px] font-black text-ink num hover:bg-black/[0.07] active:bg-black/[0.1] transition-colors disabled:opacity-40">{k}</button>
           ))}
           <button onClick={back} disabled={digits.length === 0 || disabled}
-            className="h-9 rounded-lg bg-surface flex items-center justify-center hover:bg-black/[0.07] active:scale-95 transition-all disabled:opacity-25 col-span-2">
-            <Backspace size={14} weight="bold" className="text-muted" />
+            aria-label="Apagar"
+            className="h-11 rounded-lg bg-surface border border-black/[0.05] flex items-center justify-center hover:bg-black/[0.07] active:bg-black/[0.1] transition-colors disabled:opacity-25 col-span-2">
+            <Backspace size={16} weight="bold" className="text-muted" />
           </button>
         </div>
       )}
@@ -136,12 +137,12 @@ export function SecurityModule({
 
   return (
     <div className="flex-1 h-full flex flex-col overflow-auto bg-canvas">
-      <div className="px-6 py-4 border-b border-black/[0.06] bg-white shrink-0">
+      <div className="px-6 py-4 border-b border-black/[0.06] bg-canvas shrink-0">
         <h2 className="text-sm font-black tracking-tight text-ink">Definições</h2>
         <p className="text-[11px] text-muted font-medium mt-0.5">Loja, segurança e controlos do sistema</p>
       </div>
 
-      <div className="p-6 grid grid-cols-2 gap-4 max-w-2xl">
+      <div className="flex-1 p-6 lg:p-8 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 max-w-6xl w-full mx-auto auto-rows-min content-start">
 
         {/* ── Store settings ──────────────────────────── */}
         <Section icon={<Storefront size={14} weight="bold" className="text-accent" />} iconBg="bg-accent/10" title="Configurações da Loja">
@@ -163,10 +164,10 @@ export function SecurityModule({
               {storeErrors.ownerPhone && <p className="mt-1 text-[10px] text-danger font-semibold">{storeErrors.ownerPhone}</p>}
             </div>
             <button onClick={saveStore} disabled={storeSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-[12px] font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20 disabled:opacity-60">
+              className="flex items-center gap-2 h-11 px-5 bg-accent text-white rounded-lg text-[13px] font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20 disabled:opacity-60">
               {storeSaving
-                ? <Spinner size={13} className="animate-spin" />
-                : <FloppyDisk size={13} weight="bold" />}
+                ? <Spinner size={14} className="animate-spin" />
+                : <FloppyDisk size={14} weight="bold" />}
               Guardar
             </button>
           </div>
@@ -190,7 +191,7 @@ export function SecurityModule({
               {senhaStep === 'idle' && (
                 <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
                   <button onClick={startChange}
-                    className="w-full py-2.5 rounded-lg border border-black/[0.08] text-[12px] font-bold text-ink hover:bg-surface transition-colors">
+                    className="w-full h-11 rounded-lg border border-black/[0.08] text-[13px] font-bold text-ink hover:bg-surface transition-colors">
                     Alterar Senha
                   </button>
                 </motion.div>
@@ -222,7 +223,7 @@ export function SecurityModule({
           <div className="p-5 space-y-3">
             {[
               { label: 'Terminal',  value: config?.storeName ? `${config.storeName} · Balcão 1` : 'POS-01' },
-              { label: 'Versão',    value: 'Lumina POS 2.1.0' },
+              { label: 'Versão',    value: 'Vela POS 2.1.0' },
               { label: 'Auth',      value: 'Servidor (Supabase)' },
               { label: 'Licença',   value: 'Verificada pelo servidor' },
               { label: 'Dados',     value: 'Cloud + offline queue' },
@@ -246,8 +247,8 @@ export function SecurityModule({
               {!confirmLogout ? (
                 <motion.button key="btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   onClick={() => setConfirmLogout(true)}
-                  className="w-full py-2.5 rounded-lg border border-danger/25 text-danger text-[12px] font-bold hover:bg-danger/[0.06] transition-colors flex items-center justify-center gap-2">
-                  <SignOut size={13} weight="bold" />Sair deste Dispositivo
+                  className="w-full h-11 rounded-lg border border-danger/25 text-danger text-[13px] font-bold hover:bg-danger/[0.06] transition-colors flex items-center justify-center gap-2">
+                  <SignOut size={14} weight="bold" />Sair deste Dispositivo
                 </motion.button>
               ) : (
                 <motion.div key="confirm" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -260,9 +261,9 @@ export function SecurityModule({
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setConfirmLogout(false)}
-                      className="flex-1 py-2 rounded-lg border border-black/[0.08] text-[11px] font-bold text-muted hover:bg-black/[0.04] transition-colors">Cancelar</button>
+                      className="flex-1 h-11 rounded-lg border border-black/[0.08] text-[12px] font-bold text-muted hover:bg-black/[0.04] transition-colors">Cancelar</button>
                     <button onClick={clearConfig}
-                      className="flex-1 py-2 rounded-lg bg-danger text-white text-[11px] font-bold hover:bg-danger/90 transition-colors">Confirmar</button>
+                      className="flex-1 h-11 rounded-lg bg-danger text-white text-[12px] font-bold hover:bg-danger/90 transition-colors">Confirmar</button>
                   </div>
                 </motion.div>
               )}

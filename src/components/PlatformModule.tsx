@@ -6,6 +6,7 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../lib/supabase';
+import { VelaLogo } from './VelaLogo';
 
 const cn = (...a: Parameters<typeof clsx>) => twMerge(clsx(a));
 
@@ -55,9 +56,9 @@ function fmtAge(isoDate: string): string {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: StoreStatus }) {
   const cfg = {
-    active:    { dot: 'bg-success',  label: 'Activo',    pill: 'bg-[oklch(0.94_0.06_140)] text-[oklch(0.32_0.14_140)]' },
-    suspended: { dot: 'bg-warning',  label: 'Suspenso',  pill: 'bg-[oklch(0.94_0.07_75)]  text-[oklch(0.38_0.14_60)]'  },
-    cancelled: { dot: 'bg-danger',   label: 'Cancelado', pill: 'bg-[oklch(0.94_0.05_20)]  text-[oklch(0.38_0.14_22)]'  },
+    active:    { dot: 'bg-success', label: 'Activo',    pill: 'bg-success/12 text-success' },
+    suspended: { dot: 'bg-warning', label: 'Suspenso',  pill: 'bg-warning/15 text-warning' },
+    cancelled: { dot: 'bg-danger',  label: 'Cancelado', pill: 'bg-danger/12 text-danger'   },
   }[status];
   return (
     <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold', cfg.pill)}>
@@ -81,16 +82,22 @@ function KillToggle({
       disabled={cancelled || busy}
       title={cancelled ? 'Conta cancelada' : active ? 'Suspender sistema' : 'Reativar sistema'}
       className={cn(
-        'relative h-5 w-9 rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
-        active    ? 'bg-success focus-visible:ring-success/40' :
-        cancelled ? 'bg-black/10 opacity-30 cursor-not-allowed' :
-                    'bg-warning/50 focus-visible:ring-warning/40',
+        // 44px tap surface via padding; the visual switch stays compact inside.
+        'group/sw inline-flex items-center justify-center h-11 px-2 -my-2 -mr-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
         busy && 'opacity-50 cursor-wait',
+        cancelled && 'cursor-not-allowed',
       )}>
       <span className={cn(
-        'absolute top-[3px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-all duration-200',
-        active ? 'left-[19px]' : 'left-[3px]',
-      )} />
+        'relative h-5 w-9 rounded-full transition-colors duration-200',
+        active    ? 'bg-success' :
+        cancelled ? 'bg-black/10 opacity-30' :
+                    'bg-warning/50',
+      )}>
+        <span className={cn(
+          'absolute top-[3px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-all duration-200',
+          active ? 'left-[19px]' : 'left-[3px]',
+        )} />
+      </span>
     </button>
   );
 }
@@ -115,16 +122,16 @@ function MiniPinPad({ onComplete, onCancel, cancelLabel = 'Cancelar' }: {
           <div key={i} className={`w-2.5 h-2.5 rounded-full transition-colors ${i < digits.length ? 'bg-accent' : 'bg-black/10'}`} />
         ))}
       </div>
-      <div className="grid grid-cols-6 gap-1">
+      <div className="grid grid-cols-6 gap-1.5">
         {['1','2','3','4','5','6','7','8','9','0'].map(k => (
           <button key={k} onClick={() => press(k)}
-            className="h-8 rounded-lg bg-white border border-black/[0.06] text-[12px] font-black text-ink hover:bg-surface active:scale-95 transition-all">
+            className="h-11 rounded-lg bg-canvas border border-black/[0.08] text-[13px] font-black text-ink num hover:bg-surface active:bg-black/[0.05] transition-colors">
             {k}
           </button>
         ))}
-        <button onClick={back} disabled={digits.length === 0}
-          className="h-8 rounded-lg bg-white border border-black/[0.06] flex items-center justify-center hover:bg-surface active:scale-95 transition-all disabled:opacity-25 col-span-2">
-          <Backspace size={12} weight="bold" className="text-muted" />
+        <button onClick={back} disabled={digits.length === 0} aria-label="Apagar"
+          className="h-11 rounded-lg bg-canvas border border-black/[0.08] flex items-center justify-center hover:bg-surface active:bg-black/[0.05] transition-colors disabled:opacity-25 col-span-2">
+          <Backspace size={14} weight="bold" className="text-muted" />
         </button>
       </div>
       <button onClick={onCancel} className="mt-2 text-[10px] text-muted hover:text-ink font-semibold transition-colors">{cancelLabel}</button>
@@ -201,14 +208,14 @@ function CreateStoreModal({ token, onClose, onCreated }: {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'oklch(0 0 0 / 0.45)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'oklch(0 0 0 / 0.5)' }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-[360px] overflow-hidden"
+        className="bg-canvas rounded-2xl shadow-2xl w-full max-w-[360px] overflow-hidden"
       >
         {/* Header */}
         <div className="px-5 py-4 flex items-center justify-between" style={{ background: P_BG }}>
@@ -265,11 +272,11 @@ function CreateStoreModal({ token, onClose, onCreated }: {
 
                 <div className="flex gap-2 mt-1">
                   <button type="button" onClick={onClose}
-                    className="flex-1 h-10 rounded-xl border border-black/[0.08] text-[13px] font-bold text-muted hover:bg-black/[0.03] transition-colors">
+                    className="flex-1 h-11 rounded-xl border border-black/[0.08] text-[13px] font-bold text-muted hover:bg-black/[0.03] transition-colors">
                     Cancelar
                   </button>
                   <motion.button type="submit" whileTap={{ scale: 0.97 }}
-                    className="flex-1 h-10 rounded-xl bg-accent text-white text-[13px] font-bold hover:bg-[oklch(0.42_0.2_250)] transition-colors">
+                    className="flex-1 h-11 rounded-xl bg-accent text-white text-[13px] font-bold hover:bg-accent/90 transition-colors">
                     Seguinte
                   </motion.button>
                 </div>
@@ -348,7 +355,7 @@ function StoreCard({
 
   return (
     <div className={cn(
-      'bg-white rounded-xl border border-black/[0.06] overflow-hidden transition-shadow',
+      'bg-canvas rounded-xl border border-black/[0.06] overflow-hidden transition-shadow',
       store.status !== 'cancelled' && 'hover:shadow-sm',
       store.status === 'cancelled' && 'opacity-60',
     )}>
@@ -357,7 +364,7 @@ function StoreCard({
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0">
             <div className="text-[13px] font-bold text-ink leading-tight truncate">{store.store_name}</div>
-            <div className="text-[11px] text-muted font-medium mt-0.5">
+            <div className="text-[11px] text-muted font-medium mt-0.5 num">
               {store.owner_phone} · Há {fmtAge(store.created_at)}
             </div>
           </div>
@@ -373,7 +380,7 @@ function StoreCard({
           ].map(m => (
             <div key={m.label} className="bg-surface rounded-lg py-2 px-2 text-center">
               <div className="text-[9px] text-muted font-bold uppercase tracking-wide leading-none mb-1">{m.label}</div>
-              <div className="text-[12px] font-black text-ink leading-none">{m.value}</div>
+              <div className="text-[13px] font-black text-ink leading-none num">{m.value}</div>
             </div>
           ))}
         </div>
@@ -485,14 +492,14 @@ function StoreCard({
               <div className="flex gap-2">
                 <button
                   onClick={() => setConfirming(false)}
-                  className="flex-1 py-2 rounded-lg border border-black/[0.08] text-[11px] font-bold text-muted hover:bg-black/[0.04] transition-colors"
+                  className="flex-1 h-11 rounded-lg border border-black/[0.08] text-[12px] font-bold text-muted hover:bg-black/[0.04] transition-colors"
                 >
                   Manter Suspenso
                 </button>
                 <button
                   onClick={async () => { setConfirming(false); await onCancel(); }}
                   disabled={busy}
-                  className="flex-1 py-2 rounded-lg bg-danger text-white text-[11px] font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
+                  className="flex-1 h-11 rounded-lg bg-danger text-white text-[12px] font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
                 >
                   Confirmar Cancelamento
                 </button>
@@ -524,14 +531,14 @@ function StoreCard({
               <div className="flex gap-2">
                 <button
                   onClick={() => setDeleting(false)}
-                  className="flex-1 py-2 rounded-lg border border-black/[0.08] text-[11px] font-bold text-muted hover:bg-black/[0.04] transition-colors"
+                  className="flex-1 h-11 rounded-lg border border-black/[0.08] text-[12px] font-bold text-muted hover:bg-black/[0.04] transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={async () => { setDeleting(false); await onDelete(); }}
                   disabled={busy}
-                  className="flex-1 py-2 rounded-lg bg-danger text-white text-[11px] font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
+                  className="flex-1 h-11 rounded-lg bg-danger text-white text-[12px] font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
                 >
                   Confirmar Eliminação
                 </button>
@@ -671,13 +678,13 @@ export function PlatformModule({ adminName, token, onLogout }: Props) {
       <div className="px-5 py-3 flex items-center justify-between shrink-0"
         style={{ background: P_BG }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white"
             style={{ background: P_PILL }}>
-            <Buildings size={15} weight="fill" className="text-white" />
+            <VelaLogo size={17} title="Vela" />
           </div>
           <div>
             <div className="text-[11px] font-black text-white tracking-widest uppercase">
-              Lumina Systems
+              Vela Systems
             </div>
             <div className="text-[9.5px] font-medium" style={{ color: P_DIM }}>
               Painel de Operações
@@ -691,7 +698,7 @@ export function PlatformModule({ adminName, token, onLogout }: Props) {
           </div>
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 text-[12px] font-bold h-10 px-4 rounded-lg transition-colors"
             style={{ background: 'oklch(0.22 0.02 258)', color: 'oklch(0.65 0.05 258)' }}
             onMouseEnter={e => Object.assign(e.currentTarget.style, {
               background: 'oklch(0.28 0.03 258)', color: 'oklch(0.82 0.07 258)',
@@ -700,7 +707,7 @@ export function PlatformModule({ adminName, token, onLogout }: Props) {
               background: 'oklch(0.22 0.02 258)', color: 'oklch(0.65 0.05 258)',
             })}
           >
-            <ArrowLeft size={11} weight="bold" />
+            <ArrowLeft size={13} weight="bold" />
             Voltar à Loja
           </button>
         </div>
@@ -723,12 +730,12 @@ export function PlatformModule({ adminName, token, onLogout }: Props) {
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-3">
           {STATS.map(s => (
-            <div key={s.label} className="bg-white rounded-xl border border-black/[0.06] px-4 py-3.5">
+            <div key={s.label} className="bg-canvas rounded-xl border border-black/[0.06] px-4 py-3.5">
               <div className="text-[9.5px] font-black text-muted uppercase tracking-widest mb-1.5">
                 {s.label}
               </div>
-              <div className={cn('font-black leading-none tabular-nums', s.color,
-                s.small ? 'text-[17px]' : 'text-[28px]')}>
+              <div className={cn('font-black leading-none num', s.color,
+                s.small ? 'text-[20px]' : 'text-[28px]')}>
                 {s.value}
               </div>
             </div>
@@ -743,12 +750,12 @@ export function PlatformModule({ adminName, token, onLogout }: Props) {
             </div>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-colors"
+              className="flex items-center gap-1.5 h-10 px-4 rounded-lg text-[12px] font-bold text-white transition-colors"
               style={{ background: P_PILL }}
               onMouseEnter={e => (e.currentTarget.style.background = 'oklch(0.44 0.20 280)')}
               onMouseLeave={e => (e.currentTarget.style.background = P_PILL)}
             >
-              <Plus size={11} weight="bold" />
+              <Plus size={13} weight="bold" />
               Nova Loja
             </button>
           </div>

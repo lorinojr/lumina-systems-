@@ -147,11 +147,11 @@ function ProductModal({
       </div>
       <div className="px-5 pb-5 flex gap-2 shrink-0">
         <button onClick={onClose}
-          className="flex-1 py-2.5 rounded-lg border border-black/[0.08] font-bold text-sm hover:bg-surface transition-colors">
+          className="flex-1 h-11 rounded-lg border border-black/[0.08] font-bold text-sm hover:bg-surface transition-colors">
           Cancelar
         </button>
         <button disabled={!f.barcode || !f.name || !f.price} onClick={save}
-          className="flex-[2] py-2.5 rounded-lg bg-accent text-white font-bold text-sm hover:bg-accent/90 transition-colors shadow-md shadow-accent/20 disabled:opacity-30 disabled:shadow-none">
+          className="flex-[2] h-11 rounded-lg bg-accent text-white font-bold text-sm hover:bg-accent/90 transition-colors shadow-md shadow-accent/20 disabled:opacity-30 disabled:shadow-none">
           {product ? 'Guardar Alterações' : 'Criar Produto'}
         </button>
       </div>
@@ -239,20 +239,21 @@ function ReceiveModal({
                 <tr key={e.product.id} className="hover:bg-surface/60">
                   <td className="py-2 px-3">
                     <div className="font-semibold text-[13px]">{e.product.name}</div>
-                    <div className="font-mono text-[10px] text-muted">{e.product.barcode}</div>
+                    <div className="font-mono text-[10px] text-muted num">{e.product.barcode}</div>
                   </td>
                   <td className="py-2 px-3">
                     <input type="number" min={1} value={e.qty}
                       onChange={ev => { const v = parseInt(ev.target.value); if (!isNaN(v) && v >= 0) setEntries(p => p.map(x => x.product.id === e.product.id ? { ...x, qty: v } : x)); }}
-                      className="w-20 text-center font-black text-sm border border-black/[0.08] rounded focus:outline-none focus:border-accent px-2 py-1 ml-auto block" />
+                      className="w-20 h-11 text-center font-black text-sm num border border-black/[0.08] rounded-lg focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 px-2 ml-auto block" />
                   </td>
-                  <td className="py-2 px-3 text-right text-[13px] font-semibold text-muted">
+                  <td className="py-2 px-3 text-right text-[13px] font-semibold text-muted num">
                     {e.product.stock} → <span className="text-success font-black">{e.product.stock + e.qty}</span>
                   </td>
                   <td className="py-2 px-3 text-center">
                     <button onClick={() => setEntries(p => p.filter(x => x.product.id !== e.product.id))}
-                      className="w-5 h-5 rounded flex items-center justify-center text-muted hover:text-danger hover:bg-danger/10 transition-colors">
-                      <X size={12} weight="bold" />
+                      aria-label="Remover"
+                      className="w-11 h-11 rounded-lg flex items-center justify-center text-muted hover:text-danger hover:bg-danger/10 transition-colors">
+                      <X size={14} weight="bold" />
                     </button>
                   </td>
                 </tr>
@@ -263,12 +264,12 @@ function ReceiveModal({
       </div>
       <div className="px-5 py-4 border-t border-black/[0.06] flex gap-2 shrink-0">
         <button onClick={onClose}
-          className="flex-1 py-2.5 rounded-lg border border-black/[0.08] font-bold text-sm hover:bg-surface transition-colors">
+          className="flex-1 h-11 rounded-lg border border-black/[0.08] font-bold text-sm hover:bg-surface transition-colors">
           Cancelar
         </button>
         <button disabled={entries.length === 0} onClick={confirm}
-          className="flex-[2] py-2.5 rounded-lg bg-success text-white font-bold text-sm hover:bg-success/90 transition-colors shadow-md shadow-success/20 disabled:opacity-30 disabled:shadow-none">
-          Confirmar Entrada · {entries.reduce((s, e) => s + e.qty, 0)} un.
+          className="flex-[2] h-11 rounded-lg bg-success text-white font-bold text-sm hover:bg-success/90 transition-colors shadow-md shadow-success/20 disabled:opacity-30 disabled:shadow-none">
+          <span className="num">Confirmar Entrada · {entries.reduce((s, e) => s + e.qty, 0)} un.</span>
         </button>
       </div>
     </ModalShell>
@@ -355,27 +356,27 @@ export function InventoryModule({ products, onSaveProduct, onUpdateStock, onNoti
       </AnimatePresence>
 
       {/* Header */}
-      <div className="px-5 py-3 bg-white border-b border-black/[0.06] flex items-center justify-between">
-        <h2 className="text-sm font-black tracking-tight text-ink">
+      <div className="px-5 py-3 bg-canvas border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
+        <h2 className="text-sm font-black tracking-tight text-ink shrink-0">
           Inventário
-          <span className="ml-2 text-[11px] font-semibold text-muted normal-case">{filtered.length} produtos</span>
+          <span className="ml-2 text-[11px] font-semibold text-muted normal-case num">{filtered.length} produtos</span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {onBulkImport && (
             <button onClick={onBulkImport}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-black/[0.08] rounded-lg text-xs font-bold hover:bg-surface transition-colors">
-              <Plus size={13} weight="bold" className="text-accent" />
+              className="flex items-center gap-1.5 h-10 px-3 border border-black/[0.08] rounded-lg text-xs font-bold hover:bg-surface transition-colors">
+              <Plus size={14} weight="bold" className="text-accent" />
               Importar CSV
             </button>
           )}
           <button onClick={() => setReceiveOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-black/[0.08] rounded-lg text-xs font-bold hover:bg-surface transition-colors">
-            <ArrowDown size={13} weight="bold" className="text-success" />
+            className="flex items-center gap-1.5 h-10 px-3 border border-black/[0.08] rounded-lg text-xs font-bold hover:bg-surface transition-colors">
+            <ArrowDown size={14} weight="bold" className="text-success" />
             Receber Stock
           </button>
           <button onClick={() => setNewOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">
-            <Plus size={13} weight="bold" />
+            className="flex items-center gap-1.5 h-10 px-3 bg-accent text-white rounded-lg text-xs font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">
+            <Plus size={14} weight="bold" />
             Novo Produto
           </button>
         </div>
@@ -415,18 +416,18 @@ export function InventoryModule({ products, onSaveProduct, onUpdateStock, onNoti
       </AnimatePresence>
 
       {/* Search + filter */}
-      <div className="px-5 py-2 bg-white border-b border-black/[0.06] flex items-center gap-3">
+      <div className="px-5 py-2.5 bg-canvas border-b border-black/[0.06] flex items-center gap-3">
         <div className="relative flex-1">
-          <MagnifyingGlass size={14} weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <MagnifyingGlass size={15} weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Pesquisar por nome, código ou categoria..."
-            className="w-full pl-8 pr-3 py-1.5 bg-surface border border-black/[0.07] rounded-lg text-sm font-medium focus:outline-none focus:border-accent transition-colors"
+            className="w-full h-10 pl-9 pr-3 bg-surface border border-black/[0.07] rounded-lg text-sm font-medium focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-colors"
           />
         </div>
         <select
           value={filterCat} onChange={e => setFilterCat(e.target.value)}
-          className="px-3 py-1.5 bg-surface border border-black/[0.07] rounded-lg text-xs font-semibold focus:outline-none focus:border-accent transition-colors"
+          className="h-10 px-3 bg-surface border border-black/[0.07] rounded-lg text-xs font-semibold focus:outline-none focus:border-accent transition-colors"
         >
           <option value="">Todas as categorias</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -476,32 +477,33 @@ export function InventoryModule({ products, onSaveProduct, onUpdateStock, onNoti
               {filtered.map(p => {
                 const isLow = p.stock <= p.minStock;
                 return (
-                  <tr key={p.id} className="group hover:bg-surface/60 transition-colors">
-                    <td className="py-1.5 px-3 font-mono text-[11px] text-muted">{p.barcode}</td>
-                    <td className="py-1.5 px-3">
+                  <tr key={p.id} className="hover:bg-surface/60 transition-colors">
+                    <td className="py-2 px-3 font-mono text-[11px] text-muted num">{p.barcode}</td>
+                    <td className="py-2 px-3">
                       <div className="font-semibold text-[13px] text-ink leading-tight">{p.name}</div>
                       <div className="flex items-center gap-1 mt-0.5">
                         {p.requiresPrescription && <span className="text-[9px] bg-danger/10 text-danger px-1 py-0.5 rounded font-black">Rx</span>}
                         {p.taxExempt && <span className="text-[9px] bg-success/10 text-success px-1 py-0.5 rounded font-black">0%</span>}
                       </div>
                     </td>
-                    <td className="py-1.5 px-3">
+                    <td className="py-2 px-3">
                       <span className="text-[11px] font-semibold bg-surface px-2 py-0.5 rounded text-muted">{p.category}</span>
                     </td>
-                    <td className="py-1.5 px-3 text-center text-[12px] font-mono text-muted">{p.unit}</td>
-                    <td className="py-1.5 px-3 text-right text-[13px] font-black text-ink">{p.price.toFixed(2)}</td>
-                    <td className="py-1.5 px-3 text-right text-[13px] font-semibold text-muted">{p.costPrice.toFixed(2)}</td>
-                    <td className="py-1.5 px-3 text-center">
-                      <span className={cn('text-[13px] font-black', isLow ? 'text-danger' : 'text-ink')}>
+                    <td className="py-2 px-3 text-center text-[12px] font-mono text-muted">{p.unit}</td>
+                    <td className="py-2 px-3 text-right text-[14px] font-black text-ink num">{p.price.toFixed(2)}</td>
+                    <td className="py-2 px-3 text-right text-[13px] font-semibold text-muted num">{p.costPrice.toFixed(2)}</td>
+                    <td className="py-2 px-3 text-center">
+                      <span className={cn('text-[15px] font-black num', isLow ? 'text-warning' : 'text-ink')}>
                         {p.stock}
                       </span>
-                      {isLow && <Warning size={11} weight="fill" className="inline ml-1 text-danger" />}
-                      <div className="text-[9px] text-muted/60">min {p.minStock}</div>
+                      {isLow && <Warning size={12} weight="fill" className="inline ml-1 text-warning" />}
+                      <div className="text-[9px] text-muted/60 num">min {p.minStock}</div>
                     </td>
-                    <td className="py-1.5 px-3">
+                    <td className="py-1.5 px-2 text-center">
                       <button onClick={() => setEditProduct(p)}
-                        className="w-6 h-6 rounded flex items-center justify-center text-muted hover:bg-accent/10 hover:text-accent transition-colors opacity-0 group-hover:opacity-100">
-                        <Pencil size={12} weight="bold" />
+                        aria-label="Editar produto"
+                        className="w-11 h-11 rounded-lg flex items-center justify-center text-muted hover:bg-accent/10 hover:text-accent active:bg-accent/15 transition-colors">
+                        <Pencil size={16} weight="bold" />
                       </button>
                     </td>
                   </tr>

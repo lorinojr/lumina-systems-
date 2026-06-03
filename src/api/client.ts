@@ -80,7 +80,7 @@ export async function fetchSales(): Promise<Sale[]> {
   return (sales ?? []).map(s => ({
     id: s.id, number: s.number,
     subtotal: Number(s.subtotal), tax: Number(s.tax), total: Number(s.total),
-    paymentMethod: s.payment_method as 'cash' | 'mpesa',
+    paymentMethod: s.payment_method as 'cash' | 'mpesa' | 'emola',
     timestamp: new Date(Number(s.timestamp_ms)),
     cashierId: s.cashier_id ?? null, cashierName: s.cashier_name ?? null,
     items: (itemsBySale.get(s.id) ?? []).map(i => ({

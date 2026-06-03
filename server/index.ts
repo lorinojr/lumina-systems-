@@ -1,5 +1,5 @@
 /**
- * Lumina POS – temporary in-memory backend
+ * Vela POS – temporary in-memory backend
  *
  * Uses SQLite :memory: → all data is lost on server restart.
  * No authentication, no file persistence.
@@ -260,7 +260,7 @@ function toProduct(row: any) {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🟢 Lumina API  →  http://localhost:${PORT}/api`);
+  console.log(`\n🟢 Vela API  →  http://localhost:${PORT}/api`);
   console.log(`   Mode: in-memory SQLite (data resets on restart)`);
   console.log(`   No auth  ·  Empty — add products via the Inventory page\n`);
 });

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Lock, Backspace, ArrowLeft, Users, Spinner } from '@phosphor-icons/react';
 import type { CashierRecord } from '../hooks/useAuth';
+import { VelaLogo } from './VelaLogo';
 
 // ─── PIN numpad (supports async onAttempt) ───────────────────────────────────
 const PIN_LENGTH = 4;
@@ -70,8 +71,8 @@ function PinPad({
   return (
     <div className="flex flex-col items-center w-full max-w-[280px] mx-auto">
       <button onClick={onBack}
-        className="self-start flex items-center gap-1.5 text-[11px] font-bold text-muted hover:text-ink transition-colors mb-6">
-        <ArrowLeft size={13} weight="bold" />Voltar
+        className="self-start flex items-center gap-1.5 h-11 px-3 -ml-3 rounded-lg text-[12px] font-bold text-muted hover:text-ink hover:bg-black/[0.04] transition-colors mb-3">
+        <ArrowLeft size={14} weight="bold" />Voltar
       </button>
 
       <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors duration-300 ${success ? 'bg-success/12' : 'bg-accent/10'}`}>
@@ -117,14 +118,15 @@ function PinPad({
           if (k === '⌫') return (
             <button key="back" onClick={pressBack}
               disabled={digits.length === 0 || shake || success || loading}
-              className="h-[54px] rounded-xl bg-white/60 border border-black/[0.06] flex items-center justify-center hover:bg-white active:scale-95 transition-all disabled:opacity-25">
-              <Backspace size={18} weight="bold" className="text-muted" />
+              aria-label="Apagar"
+              className="h-14 rounded-xl bg-canvas border border-black/[0.08] flex items-center justify-center hover:bg-surface active:bg-black/[0.05] transition-colors disabled:opacity-25">
+              <Backspace size={20} weight="bold" className="text-muted" />
             </button>
           );
           return (
             <button key={k} onClick={() => pressDigit(k)}
               disabled={shake || success || loading}
-              className="h-[54px] rounded-xl bg-white/60 border border-black/[0.06] text-[22px] font-black text-ink hover:bg-white active:scale-95 transition-all disabled:opacity-50 select-none">
+              className="h-14 rounded-xl bg-canvas border border-black/[0.08] text-[22px] font-black text-ink num hover:bg-surface active:bg-black/[0.05] transition-colors disabled:opacity-50 select-none">
               {k}
             </button>
           );
@@ -155,13 +157,15 @@ interface Props {
   storeName?:     string;
   onLoginCashier: (id: string, pin: string) => Promise<boolean>;
   onLoginAdmin:   (pin: string) => Promise<boolean>;
+  onChangeStore?: () => void;
 }
 
 type Screen = 'pick' | 'cashier-pin' | 'admin-pin';
 
-export function CashierLoginScreen({ cashiers, storeName, onLoginCashier, onLoginAdmin }: Props) {
+export function CashierLoginScreen({ cashiers, storeName, onLoginCashier, onLoginAdmin, onChangeStore }: Props) {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedCashier, setSelectedCashier] = useState<CashierRecord | null>(null);
+  const [confirmChangeStore, setConfirmChangeStore] = useState(false);
 
   const activeCashiers = cashiers.filter(c => c.active && c.role === 'cashier');
 
@@ -175,13 +179,13 @@ export function CashierLoginScreen({ cashiers, storeName, onLoginCashier, onLogi
   }, [onLoginAdmin]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[oklch(0.97_0.005_240)] overflow-auto p-6">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-surface overflow-auto p-6">
       <div className="absolute top-5 left-6 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-          <span className="text-white text-[11px] font-black">L</span>
+        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white">
+          <VelaLogo size={16} title="Vela" />
         </div>
         <span className="text-[11px] font-black text-muted uppercase tracking-wider">
-          {storeName ?? 'Lumina POS'}
+          {storeName ?? 'Vela POS'}
         </span>
       </div>
 
@@ -191,6 +195,40 @@ export function CashierLoginScreen({ cashiers, storeName, onLoginCashier, onLogi
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-sm">
+            {onChangeStore && (
+              <div className="mb-4 min-h-[44px] flex items-center">
+                {!confirmChangeStore ? (
+                  <button
+                    onClick={() => setConfirmChangeStore(true)}
+                    className="flex items-center gap-1.5 h-11 px-3 -ml-3 rounded-lg text-[12px] font-bold text-muted hover:text-ink hover:bg-black/[0.04] active:bg-black/[0.06] transition-colors"
+                  >
+                    <ArrowLeft size={14} weight="bold" />Voltar
+                  </button>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.12 }}
+                    className="flex items-center gap-2 w-full"
+                  >
+                    <span className="text-[11px] text-muted font-semibold flex-1 leading-tight">
+                      Vai precisar do número da loja e da senha de administrador para voltar.
+                    </span>
+                    <button
+                      onClick={() => setConfirmChangeStore(false)}
+                      className="h-9 px-3 rounded-lg text-[11px] font-bold text-muted hover:bg-black/[0.04] transition-colors shrink-0"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={onChangeStore}
+                      className="h-9 px-3 rounded-lg bg-ink text-white text-[11px] font-bold hover:bg-ink/85 transition-colors shrink-0"
+                    >
+                      Sair da loja
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            )}
             <h1 className="text-[22px] font-black text-ink text-center mb-1.5">Quem está a trabalhar?</h1>
             <p className="text-[13px] text-muted text-center font-medium mb-8">
               {activeCashiers.length > 0 ? 'Selecciona o teu perfil para começar' : 'Nenhum operador configurado'}
@@ -222,8 +260,8 @@ export function CashierLoginScreen({ cashiers, storeName, onLoginCashier, onLogi
 
             <div className="border-t border-black/[0.06] pt-5">
               <button onClick={() => setScreen('admin-pin')}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-black/[0.08] text-[12px] font-bold text-muted hover:text-ink hover:bg-white hover:border-black/[0.14] transition-all">
-                <Lock size={13} weight="bold" />Entrar como Administrador
+                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-black/[0.08] text-[13px] font-bold text-muted hover:text-ink hover:bg-canvas hover:border-black/[0.14] transition-colors">
+                <Lock size={14} weight="bold" />Entrar como Administrador
               </button>
             </div>
           </motion.div>

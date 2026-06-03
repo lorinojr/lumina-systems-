@@ -54,14 +54,15 @@ function PINPad({ label, onComplete, onCancel }: {
         {done && <button onClick={() => { setDigits([]); setDone(false); }} className="ml-2 text-[10px] text-muted hover:text-accent font-semibold">apagar</button>}
       </div>
       {!done && (
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-6 gap-1.5">
           {['1','2','3','4','5','6','7','8','9','0'].map(k => (
             <button key={k} onClick={() => press(k)}
-              className="h-9 rounded-lg bg-surface text-[13px] font-black text-ink hover:bg-black/[0.07] active:scale-95 transition-all">{k}</button>
+              className="h-11 rounded-lg bg-surface border border-black/[0.05] text-[14px] font-black text-ink num hover:bg-black/[0.07] active:bg-black/[0.1] transition-colors">{k}</button>
           ))}
           <button onClick={back} disabled={digits.length === 0}
-            className="h-9 rounded-lg bg-surface flex items-center justify-center hover:bg-black/[0.07] active:scale-95 transition-all disabled:opacity-25 col-span-2">
-            <Backspace size={14} weight="bold" className="text-muted" />
+            aria-label="Apagar"
+            className="h-11 rounded-lg bg-surface border border-black/[0.05] flex items-center justify-center hover:bg-black/[0.07] active:bg-black/[0.1] transition-colors disabled:opacity-25 col-span-2">
+            <Backspace size={16} weight="bold" className="text-muted" />
           </button>
         </div>
       )}
@@ -89,7 +90,7 @@ function AddCashierForm({ onAdd, onCancel }: {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }} className="bg-white rounded-xl border border-black/[0.06] p-5 space-y-4">
+      transition={{ duration: 0.15 }} className="bg-canvas rounded-xl border border-black/[0.06] p-5 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-[12px] font-black text-ink uppercase tracking-[0.08em]">Novo Operador</span>
         <button onClick={onCancel} className="w-6 h-6 rounded flex items-center justify-center text-muted hover:bg-black/5 transition-colors">
@@ -108,8 +109,8 @@ function AddCashierForm({ onAdd, onCancel }: {
                 nameError ? 'border-danger' : 'border-black/[0.08]')} />
             {nameError && <p className="mt-1 text-[10px] text-danger font-semibold">{nameError}</p>}
             <div className="flex gap-2 mt-3">
-              <button onClick={onCancel} className="flex-1 py-2.5 rounded-lg border border-black/[0.08] text-[12px] font-bold text-muted hover:bg-black/[0.04] transition-colors">Cancelar</button>
-              <button onClick={handleNameNext} className="flex-1 py-2.5 rounded-lg bg-accent text-white text-[12px] font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">Seguinte</button>
+              <button onClick={onCancel} className="flex-1 h-11 rounded-lg border border-black/[0.08] text-[13px] font-bold text-muted hover:bg-black/[0.04] transition-colors">Cancelar</button>
+              <button onClick={handleNameNext} className="flex-1 h-11 rounded-lg bg-accent text-white text-[13px] font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">Seguinte</button>
             </div>
           </motion.div>
         )}
@@ -175,8 +176,8 @@ function DeleteConfirm({ name, onConfirm, onCancel }: { name: string; onConfirm:
         <p className="text-[11px] font-semibold text-danger leading-snug">Remover <span className="font-black">{name}</span>? Esta acção não pode ser revertida.</p>
       </div>
       <div className="flex gap-2">
-        <button onClick={onCancel} className="flex-1 py-2 rounded-lg border border-black/[0.08] text-[11px] font-bold text-muted hover:bg-black/[0.04] transition-colors">Cancelar</button>
-        <button onClick={onConfirm} className="flex-1 py-2 rounded-lg bg-danger text-white text-[11px] font-bold hover:bg-danger/90 transition-colors">Remover</button>
+        <button onClick={onCancel} className="flex-1 h-11 rounded-lg border border-black/[0.08] text-[12px] font-bold text-muted hover:bg-black/[0.04] transition-colors">Cancelar</button>
+        <button onClick={onConfirm} className="flex-1 h-11 rounded-lg bg-danger text-white text-[12px] font-bold hover:bg-danger/90 transition-colors">Remover</button>
       </div>
     </motion.div>
   );
@@ -192,7 +193,7 @@ function CashierRow({ cashier, onChangePIN, onRemove, onNotify }: {
   const [expanded, setExpanded] = useState<'pin' | 'delete' | null>(null);
 
   return (
-    <div className="bg-white rounded-xl border border-black/[0.06] overflow-hidden">
+    <div className="bg-canvas rounded-xl border border-black/[0.06] overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3">
         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-black shrink-0 ${avatarColor(cashier.name)}`}>
           {cashier.name.charAt(0).toUpperCase()}
@@ -202,15 +203,15 @@ function CashierRow({ cashier, onChangePIN, onRemove, onNotify }: {
           <div className="text-[10px] text-muted font-medium">Operador de caixa</div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setExpanded(e => e === 'pin' ? null : 'pin')} title="Alterar PIN"
-            className={cn('w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-[11px]',
+          <button onClick={() => setExpanded(e => e === 'pin' ? null : 'pin')} title="Alterar PIN" aria-label="Alterar PIN"
+            className={cn('w-11 h-11 rounded-lg flex items-center justify-center transition-colors',
               expanded === 'pin' ? 'bg-accent/10 text-accent' : 'text-muted hover:bg-black/[0.05] hover:text-ink')}>
-            <Key size={14} weight="bold" />
+            <Key size={16} weight="bold" />
           </button>
-          <button onClick={() => setExpanded(e => e === 'delete' ? null : 'delete')} title="Remover"
-            className={cn('w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+          <button onClick={() => setExpanded(e => e === 'delete' ? null : 'delete')} title="Remover" aria-label="Remover"
+            className={cn('w-11 h-11 rounded-lg flex items-center justify-center transition-colors',
               expanded === 'delete' ? 'bg-danger/10 text-danger' : 'text-muted hover:bg-black/[0.05] hover:text-danger')}>
-            <Trash size={14} weight="bold" />
+            <Trash size={16} weight="bold" />
           </button>
         </div>
       </div>
@@ -265,35 +266,39 @@ export function TeamModule({ cashiers, onAddCashier, onChangePIN, onRemoveCashie
 
   return (
     <div className="flex-1 h-full flex flex-col overflow-auto bg-canvas">
-      <div className="px-6 py-4 border-b border-black/[0.06] bg-white shrink-0 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-black/[0.06] bg-canvas shrink-0 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-black tracking-tight text-ink">Equipa</h2>
           <p className="text-[11px] text-muted font-medium mt-0.5">
-            {activeCashiers.length} {activeCashiers.length === 1 ? 'operador' : 'operadores'} configurados
+            <span className="num">{activeCashiers.length}</span> {activeCashiers.length === 1 ? 'operador' : 'operadores'} configurados
           </p>
         </div>
         {!adding && (
           <button onClick={() => setAdding(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-accent text-white rounded-lg text-[12px] font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">
-            <UserPlus size={14} weight="bold" />Novo Operador
+            className="flex items-center gap-2 h-11 px-4 bg-accent text-white rounded-lg text-[13px] font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20">
+            <UserPlus size={15} weight="bold" />Novo Operador
           </button>
         )}
       </div>
 
-      <div className="p-6 max-w-lg space-y-3">
+      <div className="flex-1 p-6 lg:p-8 max-w-5xl w-full mx-auto flex flex-col gap-4">
         <AnimatePresence>
           {adding && <AddCashierForm onAdd={handleAdd} onCancel={() => setAdding(false)} />}
         </AnimatePresence>
 
-        {activeCashiers.length > 0 ? (
-          activeCashiers.map(c => (
-            <React.Fragment key={c.id}>
-              <CashierRow cashier={c} onChangePIN={onChangePIN} onRemove={onRemoveCashier} onNotify={onNotify} />
-            </React.Fragment>
-          ))
-        ) : !adding ? (
+        {activeCashiers.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+            {activeCashiers.map(c => (
+              <React.Fragment key={c.id}>
+                <CashierRow cashier={c} onChangePIN={onChangePIN} onRemove={onRemoveCashier} onNotify={onNotify} />
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+
+        {activeCashiers.length === 0 && !adding && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-            className="flex flex-col items-center gap-4 py-16 text-center">
+            className="flex flex-col items-center gap-4 py-20 text-center max-w-md mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-black/[0.04] flex items-center justify-center">
               <Users size={28} weight="duotone" className="text-muted" />
             </div>
@@ -302,11 +307,11 @@ export function TeamModule({ cashiers, onAddCashier, onChangePIN, onRemoveCashie
               <p className="text-[12px] text-muted leading-relaxed max-w-[220px]">Clique em "Novo Operador" para adicionar membros da equipa.</p>
             </div>
             <button onClick={() => setAdding(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-accent/10 text-accent rounded-lg text-[12px] font-bold hover:bg-accent/15 transition-colors border border-accent/20">
-              <UserPlus size={14} weight="bold" />Adicionar Primeiro Operador
+              className="flex items-center gap-2 h-11 px-4 bg-accent/10 text-accent rounded-lg text-[13px] font-bold hover:bg-accent/15 transition-colors border border-accent/20">
+              <UserPlus size={15} weight="bold" />Adicionar Primeiro Operador
             </button>
           </motion.div>
-        ) : null}
+        )}
       </div>
     </div>
   );

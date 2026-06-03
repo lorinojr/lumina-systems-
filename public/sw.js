@@ -1,6 +1,6 @@
 // Cache version — bump this whenever you need to force-clear all caches
-const SHELL_CACHE  = 'lumina-shell-v2';
-const ASSETS_CACHE = 'lumina-assets-v2';
+const SHELL_CACHE  = 'vela-shell-v1';
+const ASSETS_CACHE = 'vela-assets-v1';
 const ALL_CACHES   = [SHELL_CACHE, ASSETS_CACHE];
 
 self.addEventListener('install', () => {

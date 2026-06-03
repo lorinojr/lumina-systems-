@@ -32,7 +32,7 @@ export function KillSwitchOverlay({ config, onCallSupport }: KillSwitchOverlayPr
 
         <p className="text-white/80 text-sm md:text-base leading-relaxed max-w-md mb-10">
           A sua subscrição de {config.monthName} está em atraso. Entre em contacto com o suporte
-          Lumina para efectuar o pagamento e reactivar o sistema.
+          Vela para efectuar o pagamento e reactivar o sistema.
         </p>
 
         <a

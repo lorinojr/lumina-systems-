@@ -1,11 +1,11 @@
 {
-  "name": "Lumina POS",
-  "short_name": "Lumina",
+  "name": "Vela POS",
+  "short_name": "Vela",
   "description": "Sistema de ponto de venda para pequenos negócios em Moçambique",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A1128",
-  "theme_color": "#0066CC",
+  "background_color": "#1B3B7A",
+  "theme_color": "#2961D6",
   "orientation": "any",
   "icons": [
     {

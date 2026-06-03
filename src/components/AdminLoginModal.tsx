@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lock, Backspace, X, Spinner } from '@phosphor-icons/react';
+import { Lock, Backspace, ArrowLeft, Spinner } from '@phosphor-icons/react';
 import type { ActiveModule } from '../types';
 
 const MODULE_LABELS: Partial<Record<ActiveModule, string>> = {
@@ -79,14 +79,14 @@ export function AdminLoginModal({ targetModule, onAttempt, onSuccess, onClose }:
       <motion.div
         initial={{ opacity: 0, y: 18, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        className="relative w-full max-w-[292px] bg-white rounded-2xl shadow-2xl border border-black/[0.07] overflow-hidden">
+        className="relative w-full max-w-[292px] bg-canvas rounded-2xl shadow-2xl border border-black/[0.07] overflow-hidden">
 
         <button onClick={onClose}
-          className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/[0.05] text-muted transition-colors z-10">
-          <X size={13} weight="bold" />
+          className="absolute top-2.5 left-2.5 flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-[12px] font-bold text-muted hover:text-ink hover:bg-black/[0.04] active:bg-black/[0.06] transition-colors z-10">
+          <ArrowLeft size={14} weight="bold" />Voltar
         </button>
 
-        <div className="px-6 pt-6 pb-3 text-center">
+        <div className="px-6 pt-12 pb-3 text-center">
           <div className={`w-11 h-11 rounded-full flex items-center justify-center mx-auto mb-3 transition-colors duration-300 ${success ? 'bg-success/12' : 'bg-accent/10'}`}>
             {loading
               ? <Spinner size={20} className="text-accent animate-spin" />

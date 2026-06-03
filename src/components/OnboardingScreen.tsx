@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Backspace, Warning, Spinner, ArrowLeft } from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
 import type { StoreConfig } from '../hooks/useStoreConfig';
+import { VelaLogo } from './VelaLogo';
 
 const PIN_LEN = 4;
 
@@ -81,7 +82,7 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-0 z-[9999] bg-[#FAFAF8] flex items-center justify-center p-6"
+      className="fixed inset-0 z-[9999] bg-surface flex items-center justify-center p-6"
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -90,10 +91,15 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
       >
         {/* Header */}
         <div className="flex flex-col items-center mb-10">
-          <h1
+          <button
+            type="button"
             onClick={handleLogoClick}
-            className="text-[28px] font-black text-ink leading-none mb-2 tracking-tight cursor-default select-none"
-          >Lumina POS</h1>
+            className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-white shadow-md shadow-accent/20 mb-4 cursor-default select-none focus:outline-none"
+            aria-label="Vela"
+          >
+            <VelaLogo size={36} />
+          </button>
+          <h1 className="text-[28px] font-black text-ink leading-none mb-1.5 tracking-tight select-none">Vela POS</h1>
           <p className="text-[13px] text-muted font-medium text-center">{subtitle}</p>
         </div>
 
@@ -114,13 +120,13 @@ export function OnboardingScreen({ onComplete, onPlatformAccess }: Props) {
                   value={phone}
                   onChange={e => { setPhone(e.target.value); setPhoneError(''); }}
                   placeholder="ex: 84 123 4567"
-                  className={`h-12 px-4 rounded-xl border bg-white text-[15px] font-semibold text-ink placeholder:text-muted/40 outline-none transition-all focus:ring-2 focus:ring-accent/25 focus:border-accent ${phoneError ? 'border-danger' : 'border-black/10'}`}
+                  className={`h-12 px-4 rounded-xl border bg-canvas text-[15px] font-semibold text-ink num placeholder:text-muted/40 outline-none transition-colors focus:ring-2 focus:ring-accent/25 focus:border-accent ${phoneError ? 'border-danger' : 'border-black/10'}`}
                 />
                 {phoneError && <p className="text-[11px] text-danger font-semibold leading-tight">{phoneError}</p>}
               </div>
 
               <motion.button type="submit" whileTap={{ scale: 0.97 }}
-                className="w-full h-12 rounded-xl bg-accent text-white text-[15px] font-bold tracking-wide hover:bg-[oklch(0.42_0.2_250)] active:bg-[oklch(0.38_0.2_250)] transition-colors">
+                className="w-full h-12 rounded-xl bg-accent text-white text-[15px] font-bold tracking-wide hover:bg-accent/90 active:bg-accent/80 transition-colors">
                 Seguinte
               </motion.button>
             </motion.form>
@@ -190,13 +196,13 @@ function PINPad({ label, onComplete }: { label: string; onComplete: (pin: string
           if (k === null) return <div key={i} />;
           if (k === '⌫') return (
             <button key="back" onClick={back} disabled={digits.length === 0 || done}
-              className="h-12 rounded-xl bg-white border border-black/[0.06] flex items-center justify-center hover:bg-surface active:scale-95 transition-all disabled:opacity-25">
+              className="h-12 rounded-xl bg-canvas border border-black/[0.08] flex items-center justify-center hover:bg-surface active:bg-black/[0.05] transition-colors disabled:opacity-25">
               <Backspace size={16} weight="bold" className="text-muted" />
             </button>
           );
           return (
             <button key={k} onClick={() => press(k)} disabled={done}
-              className="h-12 rounded-xl bg-white border border-black/[0.06] text-[18px] font-black text-ink hover:bg-surface active:scale-95 transition-all disabled:opacity-50 select-none">
+              className="h-12 rounded-xl bg-canvas border border-black/[0.08] text-[18px] font-black text-ink num hover:bg-surface active:bg-black/[0.05] transition-colors disabled:opacity-50 select-none">
               {k}
             </button>
           );
